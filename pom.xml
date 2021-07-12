@@ -14,9 +14,9 @@
     </properties>
 
     <modules>
+        <module>utils</module>
         <module>server</module>
         <module>client</module>
-        <module>utils</module>
     </modules>
 
     <dependencies>
@@ -24,11 +24,6 @@
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
             <version>4.1.60.Final</version>
-        </dependency>
-        <dependency>
-            <groupId>prv.liuyao.proxy</groupId>
-            <artifactId>utils</artifactId>
-            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 

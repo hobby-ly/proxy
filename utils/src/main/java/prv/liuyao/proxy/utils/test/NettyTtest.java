@@ -1,4 +1,4 @@
-package prv.liuyao.proxy.server;
+package prv.liuyao.proxy.utils.test;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -7,7 +7,6 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -16,8 +15,11 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 
+
+/**
+ * selector: 多路复用器
+ */
 public class NettyTtest {
 
     @Test
@@ -26,13 +28,18 @@ public class NettyTtest {
 //        ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(8, 20);
         //pool 池化
 //        ByteBuf buf = UnpooledByteBufAllocator.DEFAULT.heapBuffer(8, 20);
-        ByteBuf buf = PooledByteBufAllocator.DEFAULT.heapBuffer(8, 20);
+//        ByteBuf buf = PooledByteBufAllocator.DEFAULT.heapBuffer(8, 20);
+        // 堆外 直接内存
+        ByteBuf buf = PooledByteBufAllocator.DEFAULT.directBuffer(8, 20);
         print(buf);
 
         for (int i = 0; i < 6; i++) {
             buf.writeBytes(new byte[]{1, 2, 3, 4});
             print(buf);
         }
+
+        ByteBuf byteBuf = Unpooled.copiedBuffer("hello server".getBytes());
+
     }
 
     public static void print(ByteBuf buf){
@@ -50,6 +57,7 @@ public class NettyTtest {
 
     @Test
     public void testEventGroupLoop() throws IOException {
+        // 理解成线程池 1为只有一个线程
         NioEventLoopGroup selector = new NioEventLoopGroup(1);
         for (int i = 0; i < 2; i++) {
             int finalI = i;
@@ -84,29 +92,35 @@ public class NettyTtest {
         thread.register(client); // epoll_ctl(5, ADD, 3)
 
         // 添加读事件处理
+        // 1. 读
+        // 2. 读出来数据后要做哪些事情 后续有几步 各种事情, 如过滤`编码`加密等,这些都是handler
+        //    这一系列handler 放到pipeline 中
         ChannelPipeline p = client.pipeline();
         p.addLast(new MyInHandler());
 
         // reactor 异步特征
         ChannelFuture connect = client.connect(new InetSocketAddress("127.0.0.1", 9090));
+        // 阻塞 等待连接成功
         ChannelFuture sync = connect.sync();
         ByteBuf byteBuf = Unpooled.copiedBuffer("hello server".getBytes());
-        ChannelFuture send = client.writeAndFlush(byteBuf); // 异步的
+
+        // 异步的 连接成功了 发送数据
+        ChannelFuture send = client.writeAndFlush(byteBuf);
+        // 阻塞 等待发送成功
         send.sync();
 
-
+        // 阻塞 等待断开
         sync.channel().closeFuture().sync();
+        // 服务端断开后继续执行
         System.out.println("client over ...");
 
     }
 
     /**
      * client connect: nc 127.0.0.1 9091
-     * @throws IOException
-     * @throws InterruptedException
      */
     @Test
-    public void serverMode() throws IOException, InterruptedException {
+    public void serverMode() throws Exception {
 
         NioEventLoopGroup thread = new NioEventLoopGroup(1);
         NioServerSocketChannel server = new NioServerSocketChannel();
@@ -115,8 +129,12 @@ public class NettyTtest {
 
         // 指不定什么时候来数据 响应式
         ChannelPipeline p = server.pipeline();
-        p.addLast(new MyAcceptHandler(thread, new ChannelInit())); // accept接收客户端 并注册到selector
-        ChannelFuture bind = server.bind(new InetSocketAddress("127.0.0.1", 9091));
+        // accept接收客户端 并注册到selector
+//        p.addLast(new MyAcceptHandler(thread, new MyInHandler())); // 见MyInHandler注释
+        p.addLast(new MyAcceptHandler(thread, new ChannelInit())); // 桥
+
+        ChannelFuture bind = server.bind(new InetSocketAddress("127.0.0.1", 9090));
+        // 阻塞 等待连接成功 等待关闭连接
         bind.sync().channel().closeFuture().sync();
 
         System.out.println("server close ...");
@@ -169,79 +187,5 @@ public class NettyTtest {
     }
 }
 
-class MyAcceptHandler extends ChannelInboundHandlerAdapter {
-
-    private final EventLoopGroup selector;
-    private final ChannelHandler handler;
-
-    public MyAcceptHandler(EventLoopGroup thread, ChannelHandler myInHandler) {
-        this.selector = thread;
-        this.handler = myInHandler; // ChannelInit
-    }
-
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("handler server register ...");
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        // server: listen socket -> accept client
-        // client: socket -> R/W
-        SocketChannel client = (SocketChannel) msg; // accept 怎么没调呢? 框架帮着做了
-
-        // 2. 响应式的 handler
-        ChannelPipeline p = client.pipeline();
-        p.addLast(handler); // a-1: client: pipeline[ChannelInit]
-
-        // 1. 注册
-        selector.register(client);
-
-    }
-}
-
-// 桥 为客户端添加handler(业务, 避免客户端独有的资源被其他客户端修改) 新客户端注册用
-@ChannelHandler.Sharable
-class ChannelInit extends ChannelInboundHandlerAdapter {
-
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        Channel client = ctx.channel();
-        ChannelPipeline p = client.pipeline();
-        p.addLast(new MyInHandler()); // a-2: client: pipeline[ChannelInit, MyInhandler]
-        ctx.pipeline().remove(this); // pipeline[MyInhandler]
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        System.out.println("channelinit read ...");
-    }
-}
 
 
-class MyInHandler extends ChannelInboundHandlerAdapter {
-
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("handler client registered ...");
-    }
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        System.out.println("handler client active ...");
-    }
-
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        ByteBuf buf = (ByteBuf) msg;
-
-//        CharSequence str = buf.readCharSequence(buf.readableBytes(), CharsetUtil.UTF_8);
-
-        CharSequence str = buf.getCharSequence(0, buf.readableBytes(), CharsetUtil.UTF_8);
-        // 心跳回复
-        ctx.writeAndFlush(buf);
-
-        System.out.println("read: " + str);
-
-    }
-}
