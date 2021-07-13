@@ -21,4 +21,26 @@
         </dependency>
     </dependencies>
 
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <!-- 比如我的类是com.bmft.Application.java-->
+                                <mainClass>prv.liuyao.proxy.client.ClientStarter</mainClass>
+                            </manifest>
+                        </archive>
+                        <classesDirectory>
+                        </classesDirectory>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
 </project>
