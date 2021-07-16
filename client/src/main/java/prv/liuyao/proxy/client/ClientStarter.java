@@ -5,36 +5,38 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import prv.liuyao.proxy.client.handler.TransportHandler;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
+import prv.liuyao.proxy.client.handler.VpnTransportHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
-
-import java.net.InetSocketAddress;
-import java.util.Properties;
 
 public class ClientStarter {
     static int port = PropertiesLoader.getInteger("client.port");
 
     public static void main(String[] args) {
 
-        NioEventLoopGroup worker = new NioEventLoopGroup();
-        NioEventLoopGroup boss = new NioEventLoopGroup();
+        NioEventLoopGroup worker = new NioEventLoopGroup(1);
+        NioEventLoopGroup boss = new NioEventLoopGroup(10);
 
-        ServerBootstrap sbs = new ServerBootstrap();
-        ChannelFuture bind = sbs.group(boss, worker)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new ChannelInitializer<NioSocketChannel>() {
-                    @Override
-                    protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(new TransportHandler());
-                    }
-                }).bind(new InetSocketAddress(port));
-
-        System.out.println("client start port: " + port);
         try {
+            ServerBootstrap sbs = new ServerBootstrap().group(boss, worker);
+            ChannelFuture bind = sbs
+                    .channel(NioServerSocketChannel.class)
+//                    .handler(new LoggingHandler(LogLevel.DEBUG))
+                    .childHandler(new ChannelInitializer<NioSocketChannel>() {
+                        @Override
+                        protected void initChannel(NioSocketChannel ch) throws Exception {
+//                            ch.pipeline().addLast("httpServerCodec", new HttpServerCodec());
+                            ch.pipeline().addLast(new VpnTransportHandler());
+                        }
+                    }).bind(port);
+            System.out.println("client start port: " + port);
             bind.sync().channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } finally {
+            worker.shutdownGracefully();
+            boss.shutdownGracefully();
         }
         System.out.println("client stop ...");
     }

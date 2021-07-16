@@ -6,6 +6,8 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.HttpServerCodec;
+import prv.liuyao.proxy.server.handler.HttpServerHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
 
 import java.net.InetSocketAddress;
@@ -26,11 +28,13 @@ public class ServerStarter {
                 .childHandler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
+                        ch.pipeline()
+                                .addLast("httpCodec", new HttpServerCodec())
+                                .addLast(new HttpServerHandler());
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(new ChannelInboundHandlerAdapter(){
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                System.out.println(msg);
                                 ctx.writeAndFlush(msg);
                             }
                         });
