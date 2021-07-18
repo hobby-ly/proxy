@@ -7,20 +7,18 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
-import prv.liuyao.proxy.server.handler.HttpServerHandler;
+import prv.liuyao.proxy.server.handler.VpnServerHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
-
-import java.net.InetSocketAddress;
-import java.util.Properties;
 
 public class ServerStarter {
 
+    public static final String HTTP_DECODEC_NAME = "httpCodec";
     static int port = PropertiesLoader.getInteger("server.port");
 
     public static void main(String[] args) {
 
-        NioEventLoopGroup worker = new NioEventLoopGroup();
-        NioEventLoopGroup boss = new NioEventLoopGroup();
+        NioEventLoopGroup worker = new NioEventLoopGroup(1);
+        NioEventLoopGroup boss = new NioEventLoopGroup(1);
 
         ServerBootstrap sbs = new ServerBootstrap();
         ChannelFuture bind = sbs.group(boss, worker)
@@ -29,18 +27,10 @@ public class ServerStarter {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
                         ch.pipeline()
-                                .addLast("httpCodec", new HttpServerCodec())
-                                .addLast(new HttpServerHandler());
-                        ChannelPipeline pipeline = ch.pipeline();
-                        pipeline.addLast(new ChannelInboundHandlerAdapter(){
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                ctx.writeAndFlush(msg);
-                            }
-                        });
-
+                                .addLast(HTTP_DECODEC_NAME, new HttpServerCodec())
+                                .addLast(new VpnServerHandler());
                     }
-                }).bind(new InetSocketAddress(port));
+                }).bind(port);
         System.out.println("server start port: " + port);
         try {
             bind.sync().channel().closeFuture().sync();
