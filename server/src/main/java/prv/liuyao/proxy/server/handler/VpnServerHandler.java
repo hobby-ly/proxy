@@ -5,15 +5,9 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
-import io.netty.handler.proxy.HttpProxyHandler;
-import io.netty.handler.proxy.ProxyHandler;
-import io.netty.handler.proxy.Socks4ProxyHandler;
-import io.netty.handler.proxy.Socks5ProxyHandler;
-import io.netty.resolver.NoopAddressResolverGroup;
 import io.netty.util.ReferenceCountUtil;
 import prv.liuyao.proxy.server.ServerStarter;
 
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
@@ -88,7 +82,7 @@ public class VpnServerHandler extends ChannelInboundHandlerAdapter {
                             if (isHttp) {
                                 ch0.pipeline().addLast(ServerStarter.HTTP_DECODEC_NAME, new HttpClientCodec());
                             }
-                            ch0.pipeline().addLast(new VpnForwardHandler(clientChannel, isHttp));
+                            ch0.pipeline().addLast(new VpnForwardResponseHandler(clientChannel, isHttp));
                         }
                     });
 

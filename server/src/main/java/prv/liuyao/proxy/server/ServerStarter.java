@@ -13,7 +13,7 @@ import prv.liuyao.proxy.utils.PropertiesLoader;
 public class ServerStarter {
 
     public static final String HTTP_DECODEC_NAME = "httpCodec";
-    static int port = PropertiesLoader.getInteger("server.port");
+    static int port = PropertiesLoader.getInteger("app.port");
 
     public static void main(String[] args) {
 

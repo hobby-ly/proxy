@@ -11,7 +11,7 @@ import prv.liuyao.proxy.client.handler.VpnTransportHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
 
 public class ClientStarter {
-    static int port = PropertiesLoader.getInteger("client.port");
+    static int port = PropertiesLoader.getInteger("app.port");
 
     public static void main(String[] args) {
 
