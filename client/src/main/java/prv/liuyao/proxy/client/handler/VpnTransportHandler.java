@@ -1,18 +1,18 @@
 package prv.liuyao.proxy.client.handler;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import prv.liuyao.proxy.utils.AESUtil;
 import prv.liuyao.proxy.utils.PropertiesLoader;
 
 public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
 
-    private int port = PropertiesLoader.getInteger("server.port");
-    private String host = PropertiesLoader.getString("server.host");
+    private static int serverPort = PropertiesLoader.getInteger("server.port");
+    private static String serverHost = PropertiesLoader.getString("server.host");
+    private static AESUtil aesUtil = new AESUtil(PropertiesLoader.getString("transport.aes.key"));
 
     private Channel sendChannel;
 
@@ -34,7 +34,7 @@ public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
                                 }
                             });
                         }
-                    }).connect(this.host, this.port).sync().channel();
+                    }).connect(this.serverHost, this.serverPort).sync().channel();
         }
         // 向server发送
         this.sendChannel.writeAndFlush(msg).sync();
