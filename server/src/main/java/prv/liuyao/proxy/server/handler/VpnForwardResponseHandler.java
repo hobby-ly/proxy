@@ -19,6 +19,7 @@ public class VpnForwardResponseHandler extends ChannelInboundHandlerAdapter {
         this.isHttp = isHttp;
     }
 
+    // 发出请求后的返回处理
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (this.isHttp) {
@@ -28,6 +29,8 @@ public class VpnForwardResponseHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
             if (msg instanceof HttpResponse) {
+                // todo 如何转换为 ByteBuf 加密返回 or msg直接加密？？？
+                // 这里应该直接返回给客户端 由vpn客户端进行http response解析 并返回B/C端
                 HttpResponse httpResponse = (HttpResponse) msg;
                 clientChannel.writeAndFlush(httpResponse);
                 if (HttpHeaderValues.WEBSOCKET.toString()
