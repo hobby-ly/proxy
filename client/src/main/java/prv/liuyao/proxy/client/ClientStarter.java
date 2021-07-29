@@ -9,6 +9,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import prv.liuyao.proxy.client.handler.VpnTransportHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
+import prv.liuyao.proxy.utils.netty.handler.ByteBufEncryptHandler;
 
 public class ClientStarter {
     static int port = PropertiesLoader.getInteger("app.port");
@@ -27,7 +28,9 @@ public class ClientStarter {
                         @Override
                         protected void initChannel(NioSocketChannel ch) throws Exception {
 //                            ch.pipeline().addLast("httpServerCodec", new HttpServerCodec());
-                            ch.pipeline().addLast(new VpnTransportHandler());
+                            ch.pipeline()
+                                    .addLast(new ByteBufEncryptHandler())
+                                    .addLast(new VpnTransportHandler());
                         }
                     }).bind(port);
             System.out.println("client start port: " + port);

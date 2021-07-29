@@ -1,5 +1,6 @@
 package prv.liuyao.proxy.server.handler;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -8,6 +9,7 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.util.ReferenceCountUtil;
+import prv.liuyao.proxy.utils.ByteBufferCipherUtil;
 
 public class VpnForwardResponseHandler extends ChannelInboundHandlerAdapter {
 
@@ -22,6 +24,13 @@ public class VpnForwardResponseHandler extends ChannelInboundHandlerAdapter {
     // 发出请求后的返回处理
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if (msg instanceof ByteBuf) {
+            ByteBuf encrypt = ByteBufferCipherUtil.encrypt((ByteBuf) msg);
+            clientChannel.writeAndFlush(encrypt).sync();
+            ReferenceCountUtil.release(msg);
+            return;
+        }
+        System.out.println("server tcp response: " + msg);
         if (this.isHttp) {
             //客户端channel已关闭则不转发了
             if (!clientChannel.isOpen()) {

@@ -2,15 +2,13 @@ package prv.liuyao.proxy.client.handler;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import prv.liuyao.proxy.utils.AESUtil;
 import prv.liuyao.proxy.utils.ByteBufferCipherUtil;
 import prv.liuyao.proxy.utils.PropertiesLoader;
-import prv.liuyao.proxy.utils.netty.handler.ByteBufDecrypt;
+import prv.liuyao.proxy.utils.netty.handler.ByteBufDecryptHandler;
 
 public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
 
@@ -30,7 +28,7 @@ public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline()
-                                    .addLast(new ByteBufDecrypt())
+                                    .addLast(new ByteBufDecryptHandler())
                                     .addLast(new ChannelInboundHandlerAdapter(){
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx0, Object msg0) throws Exception {
@@ -42,8 +40,7 @@ public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
                     }).connect(this.serverHost, this.serverPort).sync().channel();
         }
         // 向server发送
-        ByteBuf encrypt = ByteBufferCipherUtil.encrypt((ByteBuf) msg);
-        this.sendChannel.writeAndFlush(encrypt).sync();
+        this.sendChannel.writeAndFlush(msg).sync();
 //        ByteBufferCipherUtil.release(encrypt);
     }
 }
