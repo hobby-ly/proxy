@@ -1,13 +1,12 @@
 package prv.liuyao.proxy.client.handler;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import prv.liuyao.proxy.utils.PropertiesLoader;
+import prv.liuyao.proxy.utils.handler.WriteToChannelHandler;
 
 public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
 
@@ -26,13 +25,7 @@ public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter(){
-                                @Override
-                                public void channelRead(ChannelHandlerContext ctx0, Object msg0) throws Exception {
-                                    // server 返回的数据写回客户端
-                                    ctx.channel().writeAndFlush(msg0);
-                                }
-                            });
+                            ch.pipeline().addLast(new WriteToChannelHandler(ctx.channel()));
                         }
                     }).connect(this.host, this.port).sync().channel();
         }
