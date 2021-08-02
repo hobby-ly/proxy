@@ -9,6 +9,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import prv.liuyao.proxy.client.handler.VpnTransportHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
+import prv.liuyao.proxy.utils.netty.handler.ByteBufCipherHandler;
 import prv.liuyao.proxy.utils.netty.handler.ByteBufEncryptHandler;
 
 public class ClientStarter {
@@ -29,7 +30,7 @@ public class ClientStarter {
                         protected void initChannel(NioSocketChannel ch) throws Exception {
 //                            ch.pipeline().addLast("httpServerCodec", new HttpServerCodec());
                             ch.pipeline()
-                                    .addLast(new ByteBufEncryptHandler())
+                                    .addLast(new ByteBufCipherHandler.Encrypt())
                                     .addLast(new VpnTransportHandler());
                         }
                     }).bind(port);

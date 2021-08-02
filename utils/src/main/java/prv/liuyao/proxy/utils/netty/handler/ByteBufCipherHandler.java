@@ -22,6 +22,7 @@ public class ByteBufCipherHandler {
 
         @Override
         byte[] action(byte[] data) {
+            System.out.println("加密");
             return aesUtil.encrypt(data);
         }
     }
@@ -31,6 +32,7 @@ public class ByteBufCipherHandler {
     public static class Decrypt extends Crypt {
         @Override
         byte[] action(byte[] data) {
+            System.out.println("解密");
             return aesUtil.decrypt(data);
         }
     }
