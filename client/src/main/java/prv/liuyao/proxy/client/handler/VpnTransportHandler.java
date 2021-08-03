@@ -6,6 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import prv.liuyao.proxy.utils.PropertiesLoader;
+import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
 import prv.liuyao.proxy.utils.handler.WriteToChannelHandler;
 
 public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
@@ -25,7 +26,8 @@ public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
                     .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
-                            ch.pipeline().addLast(new WriteToChannelHandler(ctx.channel()));
+                            ch.pipeline()
+                                    .addLast(new WriteToChannelHandler(ctx.channel()));
                         }
                     }).connect(this.host, this.port).sync().channel();
         }
