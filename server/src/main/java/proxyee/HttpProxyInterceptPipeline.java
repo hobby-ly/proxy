@@ -25,7 +25,7 @@ public class HttpProxyInterceptPipeline {
 
   public void beforeRequest(Channel clientChannel, HttpRequest httpRequest) throws Exception {
     this.httpRequest = httpRequest;
-    System.out.println("posBeforeHead " + (this.posBeforeHead < 1));
+//    System.out.println("posBeforeHead " + (this.posBeforeHead < 1));
     if (this.posBeforeHead < 1) {
       this.posBeforeHead++;
       HttpProxyIntercept intercept = intercepts.get(0);
@@ -35,7 +35,7 @@ public class HttpProxyInterceptPipeline {
   }
 
   public void beforeRequest(Channel clientChannel, HttpContent httpContent) throws Exception {
-    System.out.println("posBeforeContent " + (this.posBeforeContent < 1));
+//    System.out.println("posBeforeContent " + (this.posBeforeContent < 1));
     if (this.posBeforeContent < 1) {
       this.posBeforeContent++;
       HttpProxyIntercept intercept = intercepts.get(0);
@@ -47,7 +47,7 @@ public class HttpProxyInterceptPipeline {
   public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpResponse httpResponse)
       throws Exception {
     this.httpResponse = httpResponse;
-    System.out.println("posAfterHead " + (this.posAfterHead < 1));
+//    System.out.println("posAfterHead " + (this.posAfterHead < 1));
     if (this.posAfterHead < 1) {
       this.posAfterHead++;
       HttpProxyIntercept intercept = intercepts.get(0);
@@ -58,7 +58,7 @@ public class HttpProxyInterceptPipeline {
 
   public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpContent httpContent)
       throws Exception {
-    System.out.println("posAfterContent " + (this.posAfterContent < 1));
+//    System.out.println("posAfterContent " + (this.posAfterContent < 1));
     if (this.posAfterContent < 1) {
       this.posAfterContent++;
       HttpProxyIntercept intercept = intercepts.get(0);

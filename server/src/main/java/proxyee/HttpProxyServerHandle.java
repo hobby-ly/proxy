@@ -42,14 +42,12 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
             HttpRequest request = (HttpRequest) msg;
             //第一次建立连接取host和端口号和处理代理握手
             if (status == 0) {
-                RequestProto requestProto = getRequestProto(request);
-                if (requestProto == null) { //bad request
+                boolean requestProto = getRequestProto(request);
+                if (!requestProto) { //bad request
                     ctx.channel().close();
                     return;
                 }
                 status = 1;
-                this.host = requestProto.getHost();
-                this.port = requestProto.getPort();
                 if ("CONNECT".equalsIgnoreCase(request.method().name())) {//建立代理握手
                     status = 2;
                     HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
@@ -237,8 +235,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
 
     }
 
-    public static RequestProto getRequestProto(HttpRequest httpRequest) {
-        RequestProto requestProto = new RequestProto();
+    public boolean getRequestProto(HttpRequest httpRequest) {
         int port = -1;
         String hostStr = httpRequest.headers().get(HttpHeaderNames.HOST);
         if (hostStr == null) {
@@ -247,7 +244,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
             if (matcher.find()) {
                 hostStr = matcher.group("host");
             } else {
-                return null;
+                return false;
             }
         }
         String uriStr = httpRequest.uri();
@@ -256,7 +253,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         //先从host上取端口号没取到再从uri上取端口号 issues#4
         String portTemp = null;
         if (matcher.find()) {
-            requestProto.setHost(matcher.group("host"));
+            this.host = matcher.group("host");
             portTemp = matcher.group("port");
             if (portTemp == null) {
                 matcher = pattern.matcher(uriStr);
@@ -276,51 +273,8 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                 port = 80;
             }
         }
-        requestProto.setPort(port);
-        requestProto.setSsl(isSsl);
-        return requestProto;
-    }
-
-
-    public static class RequestProto implements Serializable {
-
-        private static final long serialVersionUID = -6471051659605127698L;
-        private String host;
-        private int port;
-        private boolean ssl;
-
-        public RequestProto() {
-        }
-
-        public RequestProto(String host, int port, boolean ssl) {
-            this.host = host;
-            this.port = port;
-            this.ssl = ssl;
-        }
-
-        public String getHost() {
-            return host;
-        }
-
-        public void setHost(String host) {
-            this.host = host;
-        }
-
-        public int getPort() {
-            return port;
-        }
-
-        public void setPort(int port) {
-            this.port = port;
-        }
-
-        public boolean getSsl() {
-            return ssl;
-        }
-
-        public void setSsl(boolean ssl) {
-            this.ssl = ssl;
-        }
+        this.port = port;
+        return true;
     }
 
 }
