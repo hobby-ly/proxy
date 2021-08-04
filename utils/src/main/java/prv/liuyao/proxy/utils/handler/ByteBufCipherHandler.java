@@ -44,6 +44,10 @@ public class ByteBufCipherHandler {
 
     /**
      * 解密handler
+     *
+     * ByteToMessageDecoder
+     *  解码器 ByteBuffer 环绕处理
+     *  会将半包留存 等待下一次调用处理
      */
     public static class Decrypt extends ByteToMessageDecoder {
         @Override

@@ -7,6 +7,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
 import prv.liuyao.proxy.server.ServerStarter;
+import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
+import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
 
 import java.net.URL;
 import java.util.LinkedList;
@@ -68,50 +70,46 @@ public class VpnServerHandler extends ChannelInboundHandlerAdapter {
             if (isHttp && !(msg instanceof HttpRequest)) {
                 return;
             }
-      /*
-        添加SSL client hello的Server Name Indication extension(SNI扩展)
-        有些服务器对于client hello不带SNI扩展时会直接返回Received fatal alert: handshake_failure(握手错误)
-        例如：https://cdn.mdn.mozilla.net/static/img/favicon32.7f3da72dcea1.png
-       */
-            Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(new NioEventLoopGroup(1)) // 注册线程池
+            cf = new Bootstrap().group(new NioEventLoopGroup(1)) // 注册线程池
                     .channel(NioSocketChannel.class) // 使用NioSocketChannel来作为连接用的channel类
                     .handler(new ChannelInitializer(){
                         @Override
                         protected void initChannel(Channel ch0) throws Exception {
-                            if (isHttp) {
-                                ch0.pipeline().addLast(ServerStarter.HTTP_DECODEC_NAME, new HttpClientCodec());
-                            }
-                            ch0.pipeline().addLast(new VpnForwardResponseHandler(clientChannel, isHttp));
+                            ch0.pipeline()
+//                                    .addLast(new ByteBufCipherHandler.Encrypt())
+                                    .addLast(new WriteBackToClientHandler(clientChannel));
+                            ;
                         }
-                    });
+                    }).connect(this.host, this.port)
+                    .sync(); // 因为netty是纯异步的 requestList是为了连接，可提高并发
+            // todo 连接池
 
             requestList = new LinkedList();
-            cf = bootstrap.connect(this.host, this.port);
-            cf.addListener((ChannelFutureListener) future -> {
-                if (future.isSuccess()) {
-                    future.channel().writeAndFlush(msg);
-                    synchronized (requestList) {
-                        requestList.forEach(obj -> future.channel().writeAndFlush(obj));
-                        requestList.clear();
-                        isConnect = true;
-                    }
-                } else {
-                    requestList.forEach(obj -> ReferenceCountUtil.release(obj));
-                    requestList.clear();
-                    future.channel().close();
-                    clientChannel.close();
-                }
-            });
-        } else {
-            synchronized (requestList) {
-                if (isConnect) {
-                    cf.channel().writeAndFlush(msg);
-                } else {
-                    requestList.add(msg);
-                }
-            }
+//            cf.addListener((ChannelFutureListener) future -> {
+//                if (future.isSuccess()) {
+//                    future.channel().writeAndFlush(msg);
+//                    synchronized (requestList) {
+//                        requestList.forEach(obj -> future.channel().writeAndFlush(obj));
+//                        requestList.clear();
+//                        isConnect = true;
+//                    }
+//                } else {
+//                    requestList.forEach(obj -> ReferenceCountUtil.release(obj));
+//                    requestList.clear();
+//                    future.channel().close();
+//                    clientChannel.close();
+//                }
+//            });
         }
+//        else {
+//            synchronized (requestList) {
+//                if (isConnect) {
+                    cf.channel().writeAndFlush(msg);
+//                } else {
+//                    requestList.add(msg);
+//                }
+//            }
+//        }
     }
 
     public void getRequestProto(HttpRequest httpRequest) {

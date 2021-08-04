@@ -7,7 +7,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import prv.liuyao.proxy.utils.PropertiesLoader;
 import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
-import prv.liuyao.proxy.utils.handler.WriteToChannelHandler;
+import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
 
 public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
 
@@ -18,7 +18,6 @@ public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        System.out.println("client request: " + msg);
         if (null == sendChannel) {
             NioEventLoopGroup worker = new NioEventLoopGroup(1);
             this.sendChannel = new Bootstrap().group(worker)
@@ -27,7 +26,15 @@ public class VpnTransportHandler extends ChannelInboundHandlerAdapter {
                         @Override
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline()
-                                    .addLast(new WriteToChannelHandler(ctx.channel()));
+//                                    .addLast(new ByteBufCipherHandler.Decrypt())
+                                    .addLast(new ChannelInboundHandlerAdapter(){
+                                        @Override
+                                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                            System.out.println(msg);
+                                            super.channelRead(ctx, msg);
+                                        }
+                                    })
+                                    .addLast(new WriteBackToClientHandler(ctx.channel()));
                         }
                     }).connect(this.host, this.port).sync().channel();
         }
