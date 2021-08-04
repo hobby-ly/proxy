@@ -4,14 +4,12 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-public class HttpProxyInterceptPipeline implements Iterable<HttpProxyIntercept> {
+public class HttpProxyInterceptPipeline {
 
-  private List<HttpProxyIntercept> intercepts;
-  private HttpProxyIntercept defaultIntercept;
+  private List<HttpProxyIntercept> intercepts = new LinkedList<>();
 
   private int posBeforeHead = 0;
   private int posBeforeContent = 0;
@@ -22,8 +20,6 @@ public class HttpProxyInterceptPipeline implements Iterable<HttpProxyIntercept> 
   private HttpResponse httpResponse;
 
   public HttpProxyInterceptPipeline(HttpProxyIntercept defaultIntercept) {
-    this.intercepts = new LinkedList<>();
-    this.defaultIntercept = defaultIntercept;
     this.intercepts.add(defaultIntercept);
   }
 
@@ -63,8 +59,4 @@ public class HttpProxyInterceptPipeline implements Iterable<HttpProxyIntercept> 
     this.posAfterContent = 0;
   }
 
-  @Override
-  public Iterator<HttpProxyIntercept> iterator() {
-    return intercepts.iterator();
-  }
 }
