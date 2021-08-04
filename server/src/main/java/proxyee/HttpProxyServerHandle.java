@@ -66,7 +66,6 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         }
       }
       interceptPipeline = buildPipeline();
-      interceptPipeline.setRequestProto(new RequestProto(host, port, false));
       //fix issue #27
       if (request.uri().indexOf("/") != 0) {
         URL url = new URL(request.uri());

@@ -21,9 +21,6 @@ public class HttpProxyInterceptPipeline implements Iterable<HttpProxyIntercept> 
   private HttpRequest httpRequest;
   private HttpResponse httpResponse;
 
-  public void setRequestProto(RequestProto requestProto) {
-  }
-
   public HttpProxyInterceptPipeline(HttpProxyIntercept defaultIntercept) {
     this.intercepts = new LinkedList<>();
     this.defaultIntercept = defaultIntercept;
