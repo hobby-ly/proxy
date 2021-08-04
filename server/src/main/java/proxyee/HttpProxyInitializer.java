@@ -11,10 +11,10 @@ import io.netty.handler.proxy.ProxyHandler;
 public class HttpProxyInitializer extends ChannelInitializer {
 
   private Channel clientChannel;
-  private ProtoUtil.RequestProto requestProto;
+  private RequestProto requestProto;
   private ProxyHandler proxyHandler;
 
-  public HttpProxyInitializer(Channel clientChannel, ProtoUtil.RequestProto requestProto,
+  public HttpProxyInitializer(Channel clientChannel, RequestProto requestProto,
       ProxyHandler proxyHandler) {
     this.clientChannel = clientChannel;
     this.requestProto = requestProto;

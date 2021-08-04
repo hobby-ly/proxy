@@ -24,58 +24,6 @@ public class HttpProxyServerConfig {
     return clientSslCtx;
   }
 
-  public void setClientSslCtx(SslContext clientSslCtx) {
-    this.clientSslCtx = clientSslCtx;
-  }
-
-  public String getIssuer() {
-    return issuer;
-  }
-
-  public void setIssuer(String issuer) {
-    this.issuer = issuer;
-  }
-
-  public Date getCaNotBefore() {
-    return caNotBefore;
-  }
-
-  public void setCaNotBefore(Date caNotBefore) {
-    this.caNotBefore = caNotBefore;
-  }
-
-  public Date getCaNotAfter() {
-    return caNotAfter;
-  }
-
-  public void setCaNotAfter(Date caNotAfter) {
-    this.caNotAfter = caNotAfter;
-  }
-
-  public PrivateKey getCaPriKey() {
-    return caPriKey;
-  }
-
-  public void setCaPriKey(PrivateKey caPriKey) {
-    this.caPriKey = caPriKey;
-  }
-
-  public PrivateKey getServerPriKey() {
-    return serverPriKey;
-  }
-
-  public void setServerPriKey(PrivateKey serverPriKey) {
-    this.serverPriKey = serverPriKey;
-  }
-
-  public PublicKey getServerPubKey() {
-    return serverPubKey;
-  }
-
-  public void setServerPubKey(PublicKey serverPubKey) {
-    this.serverPubKey = serverPubKey;
-  }
-
   public EventLoopGroup getProxyLoopGroup() {
     return proxyLoopGroup;
   }
@@ -88,31 +36,4 @@ public class HttpProxyServerConfig {
     return handleSsl;
   }
 
-  public void setHandleSsl(boolean handleSsl) {
-    this.handleSsl = handleSsl;
-  }
-
-  public int getBossGroupThreads() {
-    return bossGroupThreads;
-  }
-
-  public void setBossGroupThreads(int bossGroupThreads) {
-    this.bossGroupThreads = bossGroupThreads;
-  }
-
-  public int getWorkerGroupThreads() {
-    return workerGroupThreads;
-  }
-
-  public void setWorkerGroupThreads(int workerGroupThreads) {
-    this.workerGroupThreads = workerGroupThreads;
-  }
-
-  public int getProxyGroupThreads() {
-    return proxyGroupThreads;
-  }
-
-  public void setProxyGroupThreads(int proxyGroupThreads) {
-    this.proxyGroupThreads = proxyGroupThreads;
-  }
 }

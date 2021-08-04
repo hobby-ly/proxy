@@ -18,46 +18,16 @@ public class HttpProxyInterceptPipeline implements Iterable<HttpProxyIntercept> 
   private int posAfterHead = 0;
   private int posAfterContent = 0;
 
-  private ProtoUtil.RequestProto requestProto;
   private HttpRequest httpRequest;
   private HttpResponse httpResponse;
 
-  public HttpRequest getHttpRequest() {
-    return httpRequest;
-  }
-
-  public HttpResponse getHttpResponse() {
-    return httpResponse;
-  }
-
-  public ProtoUtil.RequestProto getRequestProto() {
-    return requestProto;
-  }
-
-  public void setRequestProto(ProtoUtil.RequestProto requestProto) {
-    this.requestProto = requestProto;
+  public void setRequestProto(RequestProto requestProto) {
   }
 
   public HttpProxyInterceptPipeline(HttpProxyIntercept defaultIntercept) {
     this.intercepts = new LinkedList<>();
     this.defaultIntercept = defaultIntercept;
     this.intercepts.add(defaultIntercept);
-  }
-
-  public void addLast(HttpProxyIntercept intercept) {
-    this.intercepts.add(this.intercepts.size() - 1, intercept);
-  }
-
-  public void addFirst(HttpProxyIntercept intercept) {
-    this.intercepts.add(0, intercept);
-  }
-
-  public HttpProxyIntercept get(int index) {
-    return this.intercepts.get(index);
-  }
-
-  public HttpProxyIntercept getDefault() {
-    return this.defaultIntercept;
   }
 
   public void beforeRequest(Channel clientChannel, HttpRequest httpRequest) throws Exception {
@@ -94,54 +64,6 @@ public class HttpProxyInterceptPipeline implements Iterable<HttpProxyIntercept> 
       intercept.afterResponse(clientChannel, proxyChannel, httpContent, this);
     }
     this.posAfterContent = 0;
-  }
-
-  public int posBeforeHead() {
-    return this.posBeforeHead;
-  }
-
-  public int posBeforeContent() {
-    return this.posBeforeContent;
-  }
-
-  public int posAfterHead() {
-    return this.posAfterHead;
-  }
-
-  public int posAfterContent() {
-    return this.posAfterContent;
-  }
-
-  public void posBeforeHead(int pos) {
-    this.posBeforeHead = pos;
-  }
-
-  public void posBeforeContent(int pos) {
-    this.posBeforeContent = pos;
-  }
-
-  public void posAfterHead(int pos) {
-    this.posAfterHead = pos;
-  }
-
-  public void posAfterContent(int pos) {
-    this.posAfterContent = pos;
-  }
-
-  public void resetBeforeHead() {
-    posBeforeHead(0);
-  }
-
-  public void resetBeforeContent() {
-    posBeforeContent(0);
-  }
-
-  public void resetAfterHead() {
-    posAfterHead(0);
-  }
-
-  public void resetAfterContent() {
-    posAfterContent(0);
   }
 
   @Override
