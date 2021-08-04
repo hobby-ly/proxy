@@ -9,6 +9,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import prv.liuyao.proxy.server.handler.VpnServerHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
+import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
 
 public class ServerStarter {
 
@@ -27,6 +28,7 @@ public class ServerStarter {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
                         ch.pipeline()
+                                .addLast(new ByteBufCipherHandler.Decrypt())
                                 .addLast(HTTP_DECODEC_NAME, new HttpServerCodec())
                                 .addLast(new VpnServerHandler());
                     }

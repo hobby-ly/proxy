@@ -28,7 +28,7 @@ public class ClientStarter {
                         @Override
                         protected void initChannel(NioSocketChannel ch) throws Exception {
                             ch.pipeline()
-//                                    .addLast(new ByteBufCipherHandler.Encrypt())
+                                    .addLast(new ByteBufCipherHandler.Encrypt())
                                     .addLast(new VpnTransportHandler())
                                     .addLast(new LastHandler());
                         }
