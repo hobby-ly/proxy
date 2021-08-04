@@ -61,7 +61,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                     return;
                 }
             }
-            interceptPipeline = buildPipeline();
+            interceptPipeline = new HttpProxyInterceptPipeline(buildPipeline());
             //fix issue #27
             if (request.uri().indexOf("/") != 0) {
                 URL url = new URL(request.uri());
@@ -206,24 +206,20 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private HttpProxyInterceptPipeline buildPipeline() {
-        HttpProxyInterceptPipeline interceptPipeline = new HttpProxyInterceptPipeline(
-                new HttpProxyIntercept() {
+    private HttpProxyIntercept buildPipeline() {
+         return new HttpProxyIntercept() {
                     @Override
-                    public void beforeRequest(Channel clientChannel, HttpRequest httpRequest,
-                                              HttpProxyInterceptPipeline pipeline) throws Exception {
+                    public void beforeRequest(Channel clientChannel, HttpRequest httpRequest) throws Exception {
                         handleProxyData(clientChannel, httpRequest, true);
                     }
 
                     @Override
-                    public void beforeRequest(Channel clientChannel, HttpContent httpContent,
-                                              HttpProxyInterceptPipeline pipeline) throws Exception {
+                    public void beforeRequest(Channel clientChannel, HttpContent httpContent) throws Exception {
                         handleProxyData(clientChannel, httpContent, true);
                     }
 
                     @Override
-                    public void afterResponse(Channel clientChannel, Channel proxyChannel,
-                                              HttpResponse httpResponse, HttpProxyInterceptPipeline pipeline) throws Exception {
+                    public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpResponse httpResponse) throws Exception {
                         clientChannel.writeAndFlush(httpResponse);
                         if (HttpHeaderValues.WEBSOCKET.toString()
                                 .equals(httpResponse.headers().get(HttpHeaderNames.UPGRADE))) {
@@ -234,12 +230,11 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                     }
 
                     @Override
-                    public void afterResponse(Channel clientChannel, Channel proxyChannel,
-                                              HttpContent httpContent, HttpProxyInterceptPipeline pipeline) throws Exception {
+                    public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpContent httpContent) throws Exception {
                         clientChannel.writeAndFlush(httpContent);
                     }
-                });
-        return interceptPipeline;
+                };
+
     }
 
     public static RequestProto getRequestProto(HttpRequest httpRequest) {

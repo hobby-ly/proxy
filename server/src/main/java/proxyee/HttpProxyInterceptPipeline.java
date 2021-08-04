@@ -25,17 +25,21 @@ public class HttpProxyInterceptPipeline {
 
   public void beforeRequest(Channel clientChannel, HttpRequest httpRequest) throws Exception {
     this.httpRequest = httpRequest;
-    if (this.posBeforeHead < intercepts.size()) {
-      HttpProxyIntercept intercept = intercepts.get(this.posBeforeHead++);
-      intercept.beforeRequest(clientChannel, this.httpRequest, this);
+    System.out.println("posBeforeHead " + (this.posBeforeHead < 1));
+    if (this.posBeforeHead < 1) {
+      this.posBeforeHead++;
+      HttpProxyIntercept intercept = intercepts.get(0);
+      intercept.beforeRequest(clientChannel, this.httpRequest);
     }
     this.posBeforeHead = 0;
   }
 
   public void beforeRequest(Channel clientChannel, HttpContent httpContent) throws Exception {
-    if (this.posBeforeContent < intercepts.size()) {
-      HttpProxyIntercept intercept = intercepts.get(this.posBeforeContent++);
-      intercept.beforeRequest(clientChannel, httpContent, this);
+    System.out.println("posBeforeContent " + (this.posBeforeContent < 1));
+    if (this.posBeforeContent < 1) {
+      this.posBeforeContent++;
+      HttpProxyIntercept intercept = intercepts.get(0);
+      intercept.beforeRequest(clientChannel, httpContent);
     }
     this.posBeforeContent = 0;
   }
@@ -43,18 +47,22 @@ public class HttpProxyInterceptPipeline {
   public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpResponse httpResponse)
       throws Exception {
     this.httpResponse = httpResponse;
-    if (this.posAfterHead < intercepts.size()) {
-      HttpProxyIntercept intercept = intercepts.get(this.posAfterHead++);
-      intercept.afterResponse(clientChannel, proxyChannel, this.httpResponse, this);
+    System.out.println("posAfterHead " + (this.posAfterHead < 1));
+    if (this.posAfterHead < 1) {
+      this.posAfterHead++;
+      HttpProxyIntercept intercept = intercepts.get(0);
+      intercept.afterResponse(clientChannel, proxyChannel, this.httpResponse);
     }
     this.posAfterHead = 0;
   }
 
   public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpContent httpContent)
       throws Exception {
-    if (this.posAfterContent < intercepts.size()) {
-      HttpProxyIntercept intercept = intercepts.get(this.posAfterContent++);
-      intercept.afterResponse(clientChannel, proxyChannel, httpContent, this);
+    System.out.println("posAfterContent " + (this.posAfterContent < 1));
+    if (this.posAfterContent < 1) {
+      this.posAfterContent++;
+      HttpProxyIntercept intercept = intercepts.get(0);
+      intercept.afterResponse(clientChannel, proxyChannel, httpContent);
     }
     this.posAfterContent = 0;
   }
