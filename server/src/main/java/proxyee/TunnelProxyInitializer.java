@@ -12,19 +12,14 @@ import io.netty.handler.proxy.ProxyHandler;
 public class TunnelProxyInitializer extends ChannelInitializer {
 
   private Channel clientChannel;
-  private ProxyHandler proxyHandler;
 
-  public TunnelProxyInitializer(Channel clientChannel,
-      ProxyHandler proxyHandler) {
+  public TunnelProxyInitializer(Channel clientChannel) {
     this.clientChannel = clientChannel;
-    this.proxyHandler = proxyHandler;
   }
 
   @Override
   protected void initChannel(Channel ch) throws Exception {
-    if (proxyHandler != null) {
-      ch.pipeline().addLast(proxyHandler);
-    }
+
     ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
       @Override
       public void channelRead(ChannelHandlerContext ctx0, Object msg0) throws Exception {

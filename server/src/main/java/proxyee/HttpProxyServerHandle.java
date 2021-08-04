@@ -28,15 +28,10 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
   private String host;
   private int port;
   private int status = 0;
-  private HttpProxyServerConfig serverConfig = new HttpProxyServerConfig();
   private HttpProxyInterceptPipeline interceptPipeline;
   private List requestList;
   private boolean isConnect;
   private EventLoopGroup proxyGroup = new NioEventLoopGroup(1);
-
-  public HttpProxyServerConfig getServerConfig() {
-    return serverConfig;
-  }
 
   public HttpProxyInterceptPipeline getInterceptPipeline() {
     return interceptPipeline;
@@ -121,8 +116,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         例如：https://cdn.mdn.mozilla.net/static/img/favicon32.7f3da72dcea1.png
        */
       ChannelInitializer channelInitializer =
-          isHttp ? new HttpProxyInitializer(channel, null)
-              : new TunnelProxyInitializer(channel, null);
+          isHttp ? new HttpProxyInitializer(channel) : new TunnelProxyInitializer(channel);
       Bootstrap bootstrap = new Bootstrap();
       bootstrap.group(this.proxyGroup) // 注册线程池
           .channel(NioSocketChannel.class) // 使用NioSocketChannel来作为连接用的channel类
