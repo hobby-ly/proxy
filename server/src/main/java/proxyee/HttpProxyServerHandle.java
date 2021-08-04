@@ -2,12 +2,7 @@ package proxyee;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
@@ -32,12 +27,12 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
   private ChannelFuture cf;
   private String host;
   private int port;
-  private boolean isSsl = false;
   private int status = 0;
-  private HttpProxyServerConfig serverConfig;
+  private HttpProxyServerConfig serverConfig = new HttpProxyServerConfig();
   private HttpProxyInterceptPipeline interceptPipeline;
   private List requestList;
   private boolean isConnect;
+  private EventLoopGroup proxyGroup = new NioEventLoopGroup(1);
 
   public HttpProxyServerConfig getServerConfig() {
     return serverConfig;
@@ -48,11 +43,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
   }
 
 
-  public HttpProxyServerHandle() {
-    HttpProxyServerConfig serverConfig = new HttpProxyServerConfig();
-    serverConfig.setProxyLoopGroup(new NioEventLoopGroup(1));
-    this.serverConfig = serverConfig;
-  }
+  public HttpProxyServerHandle() { }
 
   @Override
   public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
@@ -80,7 +71,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         }
       }
       interceptPipeline = buildPipeline();
-      interceptPipeline.setRequestProto(new RequestProto(host, port, isSsl));
+      interceptPipeline.setRequestProto(new RequestProto(host, port, false));
       //fix issue #27
       if (request.uri().indexOf("/") != 0) {
         URL url = new URL(request.uri());
@@ -95,8 +86,6 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         status = 1;
       }
     } else { //ssl和websocket的握手处理
-      if (serverConfig.isHandleSsl()) {
-      }
       handleProxyData(ctx.channel(), msg, false);
     }
   }
@@ -131,12 +120,11 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         有些服务器对于client hello不带SNI扩展时会直接返回Received fatal alert: handshake_failure(握手错误)
         例如：https://cdn.mdn.mozilla.net/static/img/favicon32.7f3da72dcea1.png
        */
-      RequestProto requestProto = new RequestProto(host, port, isSsl);
       ChannelInitializer channelInitializer =
-          isHttp ? new HttpProxyInitializer(channel, requestProto, null)
+          isHttp ? new HttpProxyInitializer(channel, null)
               : new TunnelProxyInitializer(channel, null);
       Bootstrap bootstrap = new Bootstrap();
-      bootstrap.group(serverConfig.getProxyLoopGroup()) // 注册线程池
+      bootstrap.group(this.proxyGroup) // 注册线程池
           .channel(NioSocketChannel.class) // 使用NioSocketChannel来作为连接用的channel类
           .handler(channelInitializer);
       requestList = new LinkedList();
