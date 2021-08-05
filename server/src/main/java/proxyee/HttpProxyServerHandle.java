@@ -24,15 +24,9 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
     private String host;
     private int port;
     private int status = 0;
-    private HttpProxyInterceptPipeline interceptPipeline;
     private List requestList;
     private boolean isConnect;
     private EventLoopGroup proxyGroup = new NioEventLoopGroup(1);
-
-    public HttpProxyInterceptPipeline getInterceptPipeline() {
-        return interceptPipeline;
-    }
-
 
     public HttpProxyServerHandle() { }
 
@@ -59,16 +53,15 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                     return;
                 }
             }
-            interceptPipeline = new HttpProxyInterceptPipeline(buildPipeline());
             //fix issue #27
             if (request.uri().indexOf("/") != 0) {
                 URL url = new URL(request.uri());
                 request.setUri(url.getFile());
             }
-            interceptPipeline.beforeRequest(ctx.channel(), request);
+            handleProxyData(ctx.channel(), request, true);
         } else if (msg instanceof HttpContent) {
             if (status != 2) {
-                interceptPipeline.beforeRequest(ctx.channel(), (HttpContent) msg);
+                handleProxyData(ctx.channel(), msg, true);
             } else {
                 ReferenceCountUtil.release(msg);
                 status = 1;
@@ -128,12 +121,18 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                                             ReferenceCountUtil.release(msg);
                                             return;
                                         }
-                                        HttpProxyInterceptPipeline interceptPipeline = ((HttpProxyServerHandle) channel.pipeline()
-                                                .get("serverHandle")).getInterceptPipeline();
                                         if (msg instanceof HttpResponse) {
-                                            interceptPipeline.afterResponse(channel, ctx.channel(), (HttpResponse) msg);
+
+                                            HttpResponse httpResponse = (HttpResponse) msg;
+                                            channel.writeAndFlush(httpResponse);
+                                            if (HttpHeaderValues.WEBSOCKET.toString()
+                                                    .equals(httpResponse.headers().get(HttpHeaderNames.UPGRADE))) {
+                                                //websocket转发原始报文
+                                                ctx.channel().pipeline().remove("httpCodec");
+                                                channel.pipeline().remove("httpCodec");
+                                            }
                                         } else if (msg instanceof HttpContent) {
-                                            interceptPipeline.afterResponse(channel, ctx.channel(), (HttpContent) msg);
+                                            channel.writeAndFlush(msg);
                                         } else {
                                             channel.writeAndFlush(msg);
                                         }
@@ -202,37 +201,6 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                 }
             }
         }
-    }
-
-    private HttpProxyIntercept buildPipeline() {
-         return new HttpProxyIntercept() {
-                    @Override
-                    public void beforeRequest(Channel clientChannel, HttpRequest httpRequest) throws Exception {
-                        handleProxyData(clientChannel, httpRequest, true);
-                    }
-
-                    @Override
-                    public void beforeRequest(Channel clientChannel, HttpContent httpContent) throws Exception {
-                        handleProxyData(clientChannel, httpContent, true);
-                    }
-
-                    @Override
-                    public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpResponse httpResponse) throws Exception {
-                        clientChannel.writeAndFlush(httpResponse);
-                        if (HttpHeaderValues.WEBSOCKET.toString()
-                                .equals(httpResponse.headers().get(HttpHeaderNames.UPGRADE))) {
-                            //websocket转发原始报文
-                            proxyChannel.pipeline().remove("httpCodec");
-                            clientChannel.pipeline().remove("httpCodec");
-                        }
-                    }
-
-                    @Override
-                    public void afterResponse(Channel clientChannel, Channel proxyChannel, HttpContent httpContent) throws Exception {
-                        clientChannel.writeAndFlush(httpContent);
-                    }
-                };
-
     }
 
     public boolean getRequestProto(HttpRequest httpRequest) {
