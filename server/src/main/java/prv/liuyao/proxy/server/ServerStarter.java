@@ -38,6 +38,9 @@ public class ServerStarter {
             bind.sync().channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } finally {
+            worker.shutdownGracefully();
+            boss.shutdownGracefully();
         }
         System.out.println("server stop ...");
     }

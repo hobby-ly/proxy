@@ -6,6 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
+import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
 
 import java.io.Serializable;
 import java.net.URL;
@@ -112,66 +113,29 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                                  * HTTP代理，转发解码后的HTTP报文
                                  */
                                 ch.pipeline().addLast("httpCodec", new HttpClientCodec());
-                                ch.pipeline().addLast("proxyClientHandle", new ChannelInboundHandlerAdapter(){
+                                ch.pipeline().addLast("proxyClientHandle", new WriteBackToClientHandler(channel){
 
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                         //客户端channel已关闭则不转发了
-                                        if (!channel.isOpen()) {
-                                            ReferenceCountUtil.release(msg);
-                                            return;
-                                        }
+                                        super.channelRead(ctx, msg);
                                         if (msg instanceof HttpResponse) {
-
                                             HttpResponse httpResponse = (HttpResponse) msg;
-                                            channel.writeAndFlush(httpResponse);
                                             if (HttpHeaderValues.WEBSOCKET.toString()
                                                     .equals(httpResponse.headers().get(HttpHeaderNames.UPGRADE))) {
                                                 //websocket转发原始报文
                                                 ctx.channel().pipeline().remove("httpCodec");
                                                 channel.pipeline().remove("httpCodec");
                                             }
-                                        } else if (msg instanceof HttpContent) {
-                                            channel.writeAndFlush(msg);
-                                        } else {
-                                            channel.writeAndFlush(msg);
                                         }
-                                    }
-
-                                    @Override
-                                    public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-                                        ctx.channel().close();
-                                        channel.close();
-                                    }
-
-                                    @Override
-                                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                                        ctx.channel().close();
-                                        channel.close();
-                                        throw new Exception(cause);
                                     }
                                 });
                             } else {
                                 /**
                                  * http代理隧道，转发原始报文
                                  */
-                                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                                    @Override
-                                    public void channelRead(ChannelHandlerContext ctx0, Object msg0) throws Exception {
-                                        channel.writeAndFlush(msg0);
-                                    }
-                                    @Override
-                                    public void channelUnregistered(ChannelHandlerContext ctx0) throws Exception {
-                                        ctx0.channel().close();
-                                        channel.close();
-                                    }
-                                    @Override
-                                    public void exceptionCaught(ChannelHandlerContext ctx0, Throwable cause) throws Exception {
-                                        ctx0.channel().close();
-                                        channel.close();
-                                        throw new Exception(cause);
-                                    }
-                                });
+                                ch.pipeline().addLast(new WriteBackToClientHandler(channel));
+
                             }
                         }
                     });

@@ -7,7 +7,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
 import prv.liuyao.proxy.server.ServerStarter;
-import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
 import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
 
 import java.net.URL;
@@ -29,30 +28,35 @@ public class VpnServerHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
-            getRequestProto(request);
-            this.status = 1;
-
-            if ("CONNECT".equalsIgnoreCase(request.method().name())) {//建立代理握手
-                this.status = 2;
-                HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, SUCCESS);
-                ctx.writeAndFlush(response);
-                ctx.channel().pipeline().remove(ServerStarter.HTTP_DECODEC_NAME);
-                //fix issue #42
-                ReferenceCountUtil.release(msg);
-                return;
+            if (0 == status) {
+                boolean requestProto = getRequestProto(request);
+                if (!requestProto) {
+                    ctx.channel().close();
+                    return;
+                }
+                this.status = 1;
+                if ("CONNECT".equalsIgnoreCase(request.method().name())) {//建立代理握手
+                    this.status = 2;
+                    HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, SUCCESS);
+                    ctx.writeAndFlush(response);
+                    ctx.channel().pipeline().remove(ServerStarter.HTTP_DECODEC_NAME);
+                    //fix issue #42
+                    ReferenceCountUtil.release(msg);
+                    return;
+                }
             }
-            //fix issue #27
+            // todo ?? fix issue #27
             if (request.uri().indexOf("/") != 0) {
                 URL url = new URL(request.uri());
                 request.setUri(url.getFile());
             }
             handleProxyData(ctx.channel(), request, true);
         } else if (msg instanceof HttpContent) {
-            if (status != 2) {
+            if (this.status != 2) {
                 handleProxyData(ctx.channel(), (HttpContent) msg, true);
             } else {
                 ReferenceCountUtil.release(msg);
-                status = 1;
+                this.status = 1;
             }
         } else {
             handleProxyData(ctx.channel(), msg, false);
@@ -63,8 +67,7 @@ public class VpnServerHandler extends ChannelInboundHandlerAdapter {
     private List requestList;
     private boolean isConnect;
 
-    private void handleProxyData(Channel clientChannel, Object msg, boolean isHttp)
-            throws Exception {
+    private void handleProxyData(Channel clientChannel, Object msg, boolean isHttp) throws Exception {
         if (cf == null) {
             //connection异常 还有HttpContent进来，不转发
             if (isHttp && !(msg instanceof HttpRequest)) {
@@ -112,7 +115,7 @@ public class VpnServerHandler extends ChannelInboundHandlerAdapter {
 //        }
     }
 
-    public void getRequestProto(HttpRequest httpRequest) {
+    public boolean getRequestProto(HttpRequest httpRequest) {
         int port = -1;
         String hostStr = httpRequest.headers().get(HttpHeaderNames.HOST);
         if (hostStr == null) {
@@ -121,7 +124,7 @@ public class VpnServerHandler extends ChannelInboundHandlerAdapter {
             if (matcher.find()) {
                 hostStr = matcher.group("host");
             } else {
-                throw new RuntimeException("host is null ...");
+                return false;
             }
         }
         String uriStr = httpRequest.uri();
@@ -144,6 +147,7 @@ public class VpnServerHandler extends ChannelInboundHandlerAdapter {
         }
         boolean ssl = uriStr.indexOf("https") == 0 || hostStr.indexOf("https") == 0;
         this.port = port == -1 ? (ssl ? 443 : 80) : port;
+        return true;
     }
 
     @Override

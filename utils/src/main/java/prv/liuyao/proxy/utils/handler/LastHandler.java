@@ -8,11 +8,6 @@ public class LastHandler extends ChannelInboundHandlerAdapter {
 
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        ctx.channel().close();
-    }
-
-    @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         ctx.channel().close();
     }
