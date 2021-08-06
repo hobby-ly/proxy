@@ -7,8 +7,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
 import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
+import prv.liuyao.proxy.utils.queue.SimpleDisruptor;
 
-import java.io.Serializable;
 import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,9 +25,12 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
     private String host;
     private int port;
     private int status = 0;
+    private SimpleDisruptor disruptor = new SimpleDisruptor()
+            .registryConsumer(o -> {
+
+            });
     private List requestList;
-    private boolean isConnect;
-    private EventLoopGroup proxyGroup = new NioEventLoopGroup(1);
+    private Boolean isConnect;
 
     public HttpProxyServerHandle() { }
 
@@ -44,9 +47,9 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                 }
                 status = 1;
                 if ("CONNECT".equalsIgnoreCase(request.method().name())) {//建立代理握手
+//                    System.out.println("CONNECT----\n" + request);
                     status = 2;
-                    HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                            SUCCESS);
+                    HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, SUCCESS);
                     ctx.writeAndFlush(response);
                     ctx.channel().pipeline().remove("httpCodec");
                     //fix issue #42
@@ -59,17 +62,22 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                 URL url = new URL(request.uri());
                 request.setUri(url.getFile());
             }
+            // todo 只有这里不会进行channel 初始化
             handleProxyData(ctx.channel(), request, true);
+//            System.out.println("HttpRequest----\n" + msg);
         } else if (msg instanceof HttpContent) {
-            if (status != 2) {
-                handleProxyData(ctx.channel(), msg, true);
-            } else {
+//            System.out.println("HttpContent " + status + "----\n" + msg);
+            if (status == 2) {
                 ReferenceCountUtil.release(msg);
                 status = 1;
+            } else {
+                handleProxyData(ctx.channel(), msg, true);
             }
         } else { //ssl和websocket的握手处理
             handleProxyData(ctx.channel(), msg, false);
+//            System.out.println("Not Http ---- \n" + msg);
         }
+//        System.out.println(" =============================== ");
     }
 
     @Override
@@ -86,84 +94,89 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
             cf.channel().close();
         }
         ctx.channel().close();
+        cause.printStackTrace();
         throw new Exception(cause);
     }
 
-    private void handleProxyData(Channel channel, Object msg, boolean isHttp)
-            throws Exception {
+    private void handleProxyData(Channel channel, Object msg, boolean isHttp) throws Exception {
         if (cf == null) {
             //connection异常 还有HttpContent进来，不转发
             if (isHttp && !(msg instanceof HttpRequest)) {
                 System.out.println("ishttp");
                 return;
             }
-      /*
-        添加SSL client hello的Server Name Indication extension(SNI扩展)
-        有些服务器对于client hello不带SNI扩展时会直接返回Received fatal alert: handshake_failure(握手错误)
-        例如：https://cdn.mdn.mozilla.net/static/img/favicon32.7f3da72dcea1.png
-       */
-            Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(this.proxyGroup) // 注册线程池
-                    .channel(NioSocketChannel.class) // 使用NioSocketChannel来作为连接用的channel类
+            this.cf = new Bootstrap()
+                    .group(new NioEventLoopGroup(1))
+                    .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer(){
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             if (isHttp) {
-                                /**
-                                 * HTTP代理，转发解码后的HTTP报文
-                                 */
                                 ch.pipeline().addLast("httpCodec", new HttpClientCodec());
-                                ch.pipeline().addLast("proxyClientHandle", new WriteBackToClientHandler(channel){
-
-                                    @Override
-                                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                        //客户端channel已关闭则不转发了
-                                        super.channelRead(ctx, msg);
-                                        if (msg instanceof HttpResponse) {
-                                            HttpResponse httpResponse = (HttpResponse) msg;
-                                            if (HttpHeaderValues.WEBSOCKET.toString()
-                                                    .equals(httpResponse.headers().get(HttpHeaderNames.UPGRADE))) {
-                                                //websocket转发原始报文
-                                                ctx.channel().pipeline().remove("httpCodec");
-                                                channel.pipeline().remove("httpCodec");
-                                            }
+                            }
+                            ch.pipeline().addLast(new WriteBackToClientHandler(channel) {
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                    super.channelRead(ctx, msg);
+                                    if (isHttp && msg instanceof HttpResponse) {
+                                        String upgrade  = ((HttpResponse) msg).headers().get(HttpHeaderNames.UPGRADE);
+                                        if (HttpHeaderValues.WEBSOCKET.toString().equals(upgrade)) {
+                                            System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> remove http codec");
+                                            //websocket转发原始报文
+                                            ctx.channel().pipeline().remove("httpCodec");
+                                            this.clientChannel.pipeline().remove("httpCodec");
                                         }
                                     }
-                                });
-                            } else {
-                                /**
-                                 * http代理隧道，转发原始报文
-                                 */
-                                ch.pipeline().addLast(new WriteBackToClientHandler(channel));
-
-                            }
+                                }
+                            });
                         }
-                    });
+                    }).connect(host, port); // todo 不要使用sync  会阻塞其他连接
+
             requestList = new LinkedList();
-            cf = bootstrap.connect(host, port);
             cf.addListener((ChannelFutureListener) future -> {
-                if (future.isSuccess()) {
-                    future.channel().writeAndFlush(msg);
-                    synchronized (requestList) {
-                        requestList.forEach(obj -> future.channel().writeAndFlush(obj));
-                        requestList.clear();
-                        isConnect = true;
-                    }
-                } else {
-                    requestList.forEach(obj -> ReferenceCountUtil.release(obj));
-                    requestList.clear();
-                    future.channel().close();
-                    channel.close();
-                }
+                isConnect = future.isSuccess();
+                handlerData(msg);
+//                System.out.println(this.cf.isSuccess() + " -- " + future.isSuccess());
+//                if (future.isSuccess()) {
+//                    future.channel().writeAndFlush(msg);
+//                    synchronized (requestList) {
+//                        requestList.forEach(obj -> future.channel().writeAndFlush(obj));
+//                        requestList.clear();
+//                        isConnect = true;
+//                    }
+//                } else {
+//                    requestList.forEach(obj -> ReferenceCountUtil.release(obj));
+//                    requestList.clear();
+//                    future.channel().close();
+//                }
             });
-        } else {
+        }
+        else {
+            handlerData(msg);
+//            synchronized (requestList) {
+//                if (isConnect) {
+//                    cf.channel().writeAndFlush(msg);
+//                } else {
+//                    requestList.add(msg);
+//                }
+//            }
+        }
+    }
+
+    // 消息队列实现 单机最快Dispatch
+    private void handlerData(Object msg) {
+        System.out.println(isConnect + " 消息积压： " + requestList.size());
+        if (null == isConnect) {
+            requestList.add(msg);
+        } else if (isConnect) {
+            this.cf.channel().writeAndFlush(msg);
             synchronized (requestList) {
-                if (isConnect) {
-                    cf.channel().writeAndFlush(msg);
-                } else {
-                    requestList.add(msg);
-                }
+                requestList.forEach(obj -> this.cf.channel().writeAndFlush(obj));
+                requestList.clear();
             }
+        } else {
+            requestList.forEach(obj -> ReferenceCountUtil.release(obj));
+            requestList.clear();
         }
     }
 

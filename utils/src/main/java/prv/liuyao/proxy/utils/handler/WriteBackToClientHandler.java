@@ -7,21 +7,24 @@ import io.netty.util.ReferenceCountUtil;
 
 public class WriteBackToClientHandler extends ChannelInboundHandlerAdapter {
 
-    private Channel clientChannel;
+    protected Channel clientChannel;
 
     public WriteBackToClientHandler(Channel channel) {
+        if (null == channel) {
+            throw new RuntimeException("channel is null");
+        }
         this.clientChannel = channel;
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx0, Object msg0) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         //客户端channel已关闭则不转发了
         if (!clientChannel.isOpen()) {
-            ReferenceCountUtil.release(msg0);
+            ReferenceCountUtil.release(msg);
             return;
         }
         // server 返回的数据写回客户端
-        this.clientChannel.writeAndFlush(msg0);
+        this.clientChannel.writeAndFlush(msg);
     }
 
     @Override
@@ -37,7 +40,7 @@ public class WriteBackToClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         close(ctx);
-        cause.printStackTrace();
+//        cause.printStackTrace();
     }
 
     private void close(ChannelHandlerContext ctx) {
