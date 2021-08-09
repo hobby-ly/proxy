@@ -33,6 +33,12 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
+//        System.out.println(msg);
+        String[] split = msg.getClass().toString().split("\\.");
+        System.out.print(this.toString().split("@")[1] + " " + split[split.length-1] + " -> ");
+
+
+
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
             //第一次建立连接取host和端口号和处理代理握手
@@ -40,9 +46,15 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                 boolean requestProto = getRequestProto(request);
                 if (!requestProto) { //bad request
                     ctx.channel().close();
+                    System.out.println();
                     return;
                 }
                 status = 1;
+                System.out.print(request.method().name() + " -> " + request.uri());
+
+
+
+                // todo 只有https协议会走
                 if ("CONNECT".equalsIgnoreCase(request.method().name())) {//建立代理握手
 //                    System.out.println("CONNECT----\n" + request);
                     status = 2;
@@ -51,6 +63,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                     ctx.channel().pipeline().remove("httpCodec");
                     //fix issue #42
                     ReferenceCountUtil.release(msg);
+                    System.out.println();
                     return;
                 }
             }
@@ -64,9 +77,12 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
 //            System.out.println("HttpRequest----\n" + msg);
         } else if (msg instanceof HttpContent) {
 //            System.out.println("HttpContent " + status + "----\n" + msg);
-            if (status == 2) {
+            System.out.print("content status: " + status + " -> ");
+            if (status == 2) {  // todo https connect 的下一个包不处理 直接释放内存
+                System.out.println(msg);
                 ReferenceCountUtil.release(msg);
                 status = 1;
+                return;
             } else {
                 handleProxyData(ctx.channel(), msg, true);
             }
@@ -74,7 +90,9 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
             handleProxyData(ctx.channel(), msg, false);
 //            System.out.println("Not Http ---- \n" + msg);
         }
-//        System.out.println(" =============================== ");
+        tcpDisruptor.push(msg); // 按照数据包到来的顺序放到队列头部
+        System.out.println();
+        System.out.println("----------------------------------------------------------------------------------------");
     }
 
     @Override
@@ -153,7 +171,6 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
 //                }
 //            });
         }
-        tcpDisruptor.push(msg); // 按照数据包到来的顺序放到队列头部
     }
 
     // 解析http请求
@@ -188,14 +205,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
             port = Integer.parseInt(portTemp);
         }
         boolean isSsl = uriStr.indexOf("https") == 0 || hostStr.indexOf("https") == 0;
-        if (port == -1) {
-            if (isSsl) {
-                port = 443;
-            } else {
-                port = 80;
-            }
-        }
-        this.port = port;
+        this.port = port == -1 ? (isSsl ? 443 : 80) : port;
         return true;
     }
 
