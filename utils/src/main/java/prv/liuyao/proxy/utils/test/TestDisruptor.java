@@ -40,7 +40,7 @@ import java.util.function.Consumer;
  * GC产生频率降低
  * 3 定义EventHandler(消费者), 处理容器中的元素 --使用(消费或处理)元素
  */
-public class T14_Disruptor {
+public class TestDisruptor {
 
     public static void main(String[] args) throws InterruptedException {
 
@@ -134,14 +134,6 @@ public class T14_Disruptor {
                     }
                 });
 
-        dis.registryConsumer(new Consumer<String>() {
-            @Override
-            public void accept(String o) {
-                System.out.println(o + " --2");
-            }
-        });
-        dis.start();
-
         Thread[] threads = new Thread[100];
         for (int i = 0; i < threads.length; i++) {
             threads[i] = new Thread(() -> {
@@ -156,6 +148,8 @@ public class T14_Disruptor {
             }, "thread-" + i);
             threads[i].start();
         }
+        dis.registryConsumer(o -> System.out.println(o + " --2"));
+        dis.start();
         for (Thread thread : threads) {
             thread.join();
         }

@@ -25,12 +25,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
     private String host;
     private int port;
     private int status = 0;
-    private SimpleDisruptor disruptor = new SimpleDisruptor()
-            .registryConsumer(o -> {
-
-            });
-    private List requestList;
-    private Boolean isConnect;
+    private SimpleDisruptor disruptor = new SimpleDisruptor(); // MQ 需保证数据包顺序
 
     public HttpProxyServerHandle() { }
 
@@ -132,54 +127,20 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                         }
                     }).connect(host, port); // todo 不要使用sync  会阻塞其他连接
 
-            requestList = new LinkedList();
             cf.addListener((ChannelFutureListener) future -> {
-                isConnect = future.isSuccess();
-                handlerData(msg);
-//                System.out.println(this.cf.isSuccess() + " -- " + future.isSuccess());
-//                if (future.isSuccess()) {
-//                    future.channel().writeAndFlush(msg);
-//                    synchronized (requestList) {
-//                        requestList.forEach(obj -> future.channel().writeAndFlush(obj));
-//                        requestList.clear();
-//                        isConnect = true;
-//                    }
-//                } else {
-//                    requestList.forEach(obj -> ReferenceCountUtil.release(obj));
-//                    requestList.clear();
-//                    future.channel().close();
-//                }
+                if (future.isSuccess()) {
+                    disruptor.registryConsumer(o -> this.cf.channel().writeAndFlush(o));
+                } else {
+                    disruptor.registryConsumer(o -> ReferenceCountUtil.release(o));
+                }
+//                disruptor.push(msg); // 注意 首次连接 需要放到队列头部，若在这里加 则有可能晚于第二个数据包
+                disruptor.start(); // 启动MQ
             });
         }
-        else {
-            handlerData(msg);
-//            synchronized (requestList) {
-//                if (isConnect) {
-//                    cf.channel().writeAndFlush(msg);
-//                } else {
-//                    requestList.add(msg);
-//                }
-//            }
-        }
+        disruptor.push(msg); // 按照数据包到来的顺序放到队列头部
     }
 
-    // 消息队列实现 单机最快Dispatch
-    private void handlerData(Object msg) {
-        System.out.println(isConnect + " 消息积压： " + requestList.size());
-        if (null == isConnect) {
-            requestList.add(msg);
-        } else if (isConnect) {
-            this.cf.channel().writeAndFlush(msg);
-            synchronized (requestList) {
-                requestList.forEach(obj -> this.cf.channel().writeAndFlush(obj));
-                requestList.clear();
-            }
-        } else {
-            requestList.forEach(obj -> ReferenceCountUtil.release(obj));
-            requestList.clear();
-        }
-    }
-
+    // 解析http请求
     public boolean getRequestProto(HttpRequest httpRequest) {
         int port = -1;
         String hostStr = httpRequest.headers().get(HttpHeaderNames.HOST);
