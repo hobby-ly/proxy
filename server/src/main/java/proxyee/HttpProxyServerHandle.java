@@ -10,8 +10,7 @@ import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
 import prv.liuyao.proxy.utils.queue.SimpleDisruptor;
 
 import java.net.URL;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,7 +24,10 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
     private String host;
     private int port;
     private int status = 0;
-    private SimpleDisruptor disruptor = new SimpleDisruptor(); // MQ 需保证数据包顺序
+    private Consumer disruptorConsumer;
+    private SimpleDisruptor tcpDisruptor = new SimpleDisruptor()
+            .registryConsumer(o -> disruptorConsumer.accept(o)) // MQ 需保证数据包顺序
+            ;
 
     public HttpProxyServerHandle() { }
 
@@ -127,17 +129,31 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
                         }
                     }).connect(host, port); // todo 不要使用sync  会阻塞其他连接
 
-            cf.addListener((ChannelFutureListener) future -> {
+            cf.addListener(future -> {
                 if (future.isSuccess()) {
-                    disruptor.registryConsumer(o -> this.cf.channel().writeAndFlush(o));
+                    disruptorConsumer = o -> cf.channel().writeAndFlush(o);
                 } else {
-                    disruptor.registryConsumer(o -> ReferenceCountUtil.release(o));
+                    disruptorConsumer = o -> ReferenceCountUtil.release(o);
                 }
 //                disruptor.push(msg); // 注意 首次连接 需要放到队列头部，若在这里加 则有可能晚于第二个数据包
-                disruptor.start(); // 启动MQ
+                tcpDisruptor.start(); // 启动MQ
             });
+
+            // 这种 消费没问题
+//            disruptor.registryConsumer(o -> this.cf.channel().writeAndFlush(o));
+//            disruptor.start(); // 启动MQ
+//            System.out.println("------------------------- start ");
+
+            // 这种 消费者失效
+//            cf.addListener(future -> {
+//                if (future.isSuccess()) {
+//                    tcpDisruptor.registryConsumer(o -> cf.channel().writeAndFlush(o)).start();
+//                } else {
+//                    tcpDisruptor.registryConsumer(o -> ReferenceCountUtil.release(o)).start();
+//                }
+//            });
         }
-        disruptor.push(msg); // 按照数据包到来的顺序放到队列头部
+        tcpDisruptor.push(msg); // 按照数据包到来的顺序放到队列头部
     }
 
     // 解析http请求
@@ -183,4 +199,7 @@ public class HttpProxyServerHandle extends ChannelInboundHandlerAdapter {
         return true;
     }
 
+    private void println(Object str) {
+        System.out.println(this.toString().split("@")[1] + " --> " + str);
+    }
 }

@@ -126,13 +126,7 @@ public class TestDisruptor {
 
     private static void test0() throws InterruptedException {
 
-        SimpleDisruptor<String> dis = new SimpleDisruptor<String>()
-                .registryConsumer(new Consumer<String>() {
-                    @Override
-                    public void accept(String o) {
-                        System.out.println(o);
-                    }
-                });
+        SimpleDisruptor<String> dis = new SimpleDisruptor<String>();
 
         Thread[] threads = new Thread[100];
         for (int i = 0; i < threads.length; i++) {
@@ -148,7 +142,9 @@ public class TestDisruptor {
             }, "thread-" + i);
             threads[i].start();
         }
-        dis.registryConsumer(o -> System.out.println(o + " --2"));
+//        dis.registryConsumer(o -> System.out.println(o + " --2"));
+        dis.registryConsumer(o -> System.out.println(o));
+//        dis.registryConsumer(o -> { });
         dis.start();
         for (Thread thread : threads) {
             thread.join();

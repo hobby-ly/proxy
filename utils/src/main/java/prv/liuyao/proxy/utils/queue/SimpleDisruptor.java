@@ -2,6 +2,7 @@ package prv.liuyao.proxy.utils.queue;
 
 import com.lmax.disruptor.EventFactory;
 import com.lmax.disruptor.EventHandler;
+import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 
@@ -23,6 +24,21 @@ public class SimpleDisruptor<T> {
                 return new LyEvent<T>();
             }
         }, ringBufferSize, Executors.defaultThreadFactory());
+        this.disruptor.setDefaultExceptionHandler(new ExceptionHandler<LyEvent<T>>() {
+            @Override
+            public void handleEventException(Throwable throwable, long l, LyEvent<T> tLyEvent) {
+                System.out.println(tLyEvent.get());
+                throwable.printStackTrace();
+            }
+            @Override
+            public void handleOnStartException(Throwable throwable) {
+                throwable.printStackTrace();
+            }
+            @Override
+            public void handleOnShutdownException(Throwable throwable) {
+                throwable.printStackTrace();
+            }
+        });
     }
 
     public void push(T t) {
