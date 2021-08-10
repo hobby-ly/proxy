@@ -35,7 +35,8 @@ public class ServerStarter {
 //                                .addLast(new HttpProxySyncHandler());
                     }
                 }).bind(port);
-        System.out.println("server start port: " + port);
+        System.out.println("server start port: " + port + ", "
+                + PropertiesLoader.getString("transport.aes.key"));
         try {
             bind.sync().channel().closeFuture().sync();
         } catch (InterruptedException e) {

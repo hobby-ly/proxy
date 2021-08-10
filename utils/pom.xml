@@ -9,9 +9,8 @@
         <groupId>prv.liuyao.proxy</groupId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>utils</artifactId>
-
+    <packaging>jar</packaging>
 
     <dependencies>
 
@@ -25,7 +24,11 @@
         <dependency>
             <groupId>com.lmax</groupId>
             <artifactId>disruptor</artifactId>
-            <version>3.4.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
         </dependency>
     </dependencies>
 </project>

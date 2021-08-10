@@ -17,8 +17,8 @@ public class PropertiesLoader {
     private static final String DEFAULT_PROP_NAME = "application.properties";
     protected static final Map<String, Properties> PROPS = new ConcurrentHashMap<>();
     private static final String STARTER_PATH = new File("").getAbsolutePath() + File.separator;
-    private static final String JAR_PATH = getLastFolderFromPath(
-            PropertiesLoader.class.getClassLoader().getResource("").getPath()) + File.separator;
+//    private static final String JAR_PATH = getLastFolderFromPath(
+//            PropertiesLoader.class.getClassLoader().getResource("META-INF").getPath()) + File.separator;
     private static final String[] RELATIVE_PATH = {"", "config" + File.separator, "conf" + File.separator};
 
     static {
@@ -70,11 +70,10 @@ public class PropertiesLoader {
                 if (null == PROPS.get(propName)){
                     while (propName.startsWith("/")) { propName = propName.substring(1); }
                     while (propName.startsWith("\\")) { propName = propName.substring(1); }
-                    Properties p = new Properties();
                     File file = new File(STARTER_PATH + propName);
                     for (int i = 0; i < RELATIVE_PATH.length; i++) {
                         if (file.exists()) break;
-                        file = new File(JAR_PATH + RELATIVE_PATH[i] + propName);
+                        file = new File(STARTER_PATH + RELATIVE_PATH[i] + propName);
                     }
                     InputStream is = null;
                     try {
@@ -89,6 +88,7 @@ public class PropertiesLoader {
                                 is = PropertiesLoader.class.getClassLoader().getParent().getResourceAsStream(propName);
                             }
                         }
+                        Properties p = new Properties();
                         p.load(is);
                         PROPS.put(propName, p);
                     } catch (IOException e) {
