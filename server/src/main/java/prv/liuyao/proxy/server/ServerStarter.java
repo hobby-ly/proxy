@@ -30,7 +30,8 @@ public class ServerStarter {
                         ch.pipeline()
 //                                .addLast(new ByteBufCipherHandler.Decrypt())
                                 .addLast(HTTP_DECODEC_NAME, new HttpServerCodec())
-                                .addLast(new HttpProxyAsyncHandler());
+//                                .addLast(new HttpProxyAsyncHandler());
+                                .addLast(new HttpProxySyncHandler());
                     }
                 }).bind(port);
         System.out.println("server start port: " + port);

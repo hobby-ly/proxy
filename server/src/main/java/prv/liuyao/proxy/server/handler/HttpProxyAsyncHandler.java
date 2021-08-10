@@ -39,7 +39,6 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
     private SimpleDisruptor tcpDisruptor = new SimpleDisruptor()
             .registryConsumer(o -> disruptorConsumer.accept(o)) // MQ 需保证数据包顺序
             ;
-    private int status = 0;
 
     public HttpProxyAsyncHandler() {
     }
@@ -49,18 +48,15 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
             //第一次建立连接取host和端口号和处理代理握手
-            if (status == 0) {
+            if (null == this.cf) {
                 boolean isConnect = "CONNECT".equalsIgnoreCase(request.method().name());
                 boolean initSuccess = channelInit(request, ctx.channel(), isConnect);
                 if (!initSuccess) { //bad request
                     ctx.channel().close();
                     return;
                 }
-                status = 1;
-
-                // todo 只有https协议会走
-                if (isConnect) {//建立代理握手
-                    status = 2;
+                // https 握手
+                if (isConnect) {
                     HttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, SUCCESS);
                     ctx.writeAndFlush(response);
                     ctx.channel().pipeline().remove(ServerStarter.HTTP_DECODEC_NAME);
@@ -73,12 +69,6 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
             if (request.uri().indexOf("/") != 0) {
                 URL url = new URL(request.uri());
                 request.setUri(url.getFile());
-            }
-        } else if (msg instanceof HttpContent) {
-            if (status == 2) {  // todo https connect 的下一个包不处理 直接释放内存
-                ReferenceCountUtil.release(msg);
-                status = 1;
-                return;
             }
         }
         tcpDisruptor.push(msg); // 按照数据包到来的顺序放到队列头部
