@@ -29,18 +29,18 @@ import java.util.regex.Pattern;
  *  1. client GET httpRequest data -> server
  *  so. 协议不加密，需要用HttpClientCodec解包，不然浏览器没法识别字节数组
  */
-public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
+public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
     //http代理隧道握手成功
     public final static HttpResponseStatus SUCCESS = new HttpResponseStatus(200,
             "Connection established");
 
-    private ChannelFuture cf;
+    private ChannelFuture sendConnect;
     private Consumer disruptorConsumer;
     private SimpleDisruptor tcpDisruptor = new SimpleDisruptor()
             .registryConsumer(o -> disruptorConsumer.accept(o)) // MQ 需保证数据包顺序
             ;
 
-    public HttpProxyAsyncHandler() {
+    public VpnServerAsyncHandler() {
     }
 
     @Override
@@ -48,7 +48,7 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
             //第一次建立连接取host和端口号和处理代理握手
-            if (null == this.cf) {
+            if (null == this.sendConnect) {
                 boolean isConnect = "CONNECT".equalsIgnoreCase(request.method().name());
                 boolean initSuccess = channelInit(request, ctx.channel(), isConnect);
                 if (!initSuccess) { //bad request
@@ -110,7 +110,7 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
         }
         port = port == -1 ? (isSsl ? 443 : 80) : port;
         // 处理连接
-        this.cf = new Bootstrap()
+        this.sendConnect = new Bootstrap()
                 .group(new NioEventLoopGroup(1))
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer() {
@@ -123,6 +123,7 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
 
                         // todo 加密
 
+                        // 往回传输
                         ch.pipeline().addLast(new WriteBackToClientHandler(channel) {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -141,9 +142,9 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
                     }
                 }).connect(host, port);
 
-        this.cf.addListener(future -> {
+        this.sendConnect.addListener(future -> {
             if (future.isSuccess()) {
-                disruptorConsumer = o -> cf.channel().writeAndFlush(o);
+                disruptorConsumer = o -> sendConnect.channel().writeAndFlush(o);
             } else {
                 disruptorConsumer = o -> ReferenceCountUtil.release(o);
             }
@@ -188,8 +189,8 @@ public class HttpProxyAsyncHandler extends ChannelInboundHandlerAdapter {
             disruptorConsumer = o -> ReferenceCountUtil.release(o);
             this.tcpDisruptor.shutdown();
         }
-        if (cf != null) {
-            this.cf.channel().close();
+        if (sendConnect != null) {
+            this.sendConnect.channel().close();
         }
         ctx.channel().close();
     }

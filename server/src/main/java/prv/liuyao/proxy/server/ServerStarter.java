@@ -7,9 +7,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
-import prv.liuyao.proxy.server.handler.HttpProxyAsyncHandler;
 import prv.liuyao.proxy.server.handler.HttpProxySyncHandler;
+import prv.liuyao.proxy.server.handler.VpnServerAsyncHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
+import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
 
 public class ServerStarter {
 
@@ -28,10 +29,10 @@ public class ServerStarter {
                     @Override
                     protected void initChannel(NioSocketChannel ch) throws Exception {
                         ch.pipeline()
-//                                .addLast(new ByteBufCipherHandler.Decrypt())
+                                .addLast(new ByteBufCipherHandler.Decrypt())
                                 .addLast(HTTP_DECODEC_NAME, new HttpServerCodec())
-//                                .addLast(new HttpProxyAsyncHandler());
-                                .addLast(new HttpProxySyncHandler());
+                                .addLast(new VpnServerAsyncHandler());
+//                                .addLast(new HttpProxySyncHandler());
                     }
                 }).bind(port);
         System.out.println("server start port: " + port);

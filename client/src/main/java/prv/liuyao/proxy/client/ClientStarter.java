@@ -5,9 +5,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
-import prv.liuyao.proxy.client.handler.VpnTransportHandler;
+import prv.liuyao.proxy.client.handler.VpnClientAsyncHandler;
 import prv.liuyao.proxy.utils.PropertiesLoader;
 import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
 import prv.liuyao.proxy.utils.handler.LastHandler;
@@ -28,8 +26,8 @@ public class ClientStarter {
                         @Override
                         protected void initChannel(NioSocketChannel ch) throws Exception {
                             ch.pipeline()
-                                    .addLast(new ByteBufCipherHandler.Encrypt())
-                                    .addLast(new VpnTransportHandler())
+                                    .addLast(new ByteBufCipherHandler.Encrypt()) // 加密发送
+                                    .addLast(new VpnClientAsyncHandler())
                                     .addLast(new LastHandler());
                         }
                     }).bind(port);
