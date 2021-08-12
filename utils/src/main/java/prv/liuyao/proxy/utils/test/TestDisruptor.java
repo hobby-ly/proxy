@@ -44,7 +44,6 @@ public class TestDisruptor {
 
     public static void main(String[] args) throws InterruptedException {
 
-        test0();
 //        test1();
 //        test2();
     }
@@ -123,36 +122,6 @@ public class TestDisruptor {
             Thread.sleep(1000);
         }
     }
-
-    private static void test0() throws InterruptedException {
-
-        SimpleDisruptor<String> dis = new SimpleDisruptor<String>();
-
-        Thread[] threads = new Thread[100];
-        for (int i = 0; i < threads.length; i++) {
-            threads[i] = new Thread(() -> {
-                for (int j = 0; j < 20; j++) {
-                    dis.push(Thread.currentThread().getName() + " -> " + j);
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }, "thread-" + i);
-            threads[i].start();
-        }
-//        dis.registryConsumer(o -> System.out.println(o + " --2"));
-        dis.registryConsumer(o -> System.out.println(o));
-//        dis.registryConsumer(o -> { });
-        dis.start();
-        for (Thread thread : threads) {
-            thread.join();
-        }
-
-        dis.shutdown();
-    }
-
 
 }
 

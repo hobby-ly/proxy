@@ -8,7 +8,8 @@ import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
 import prv.liuyao.proxy.server.ServerStarter;
 import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
-import prv.liuyao.proxy.utils.queue.SimpleDisruptor;
+import prv.liuyao.proxy.utils.queue.LinkedMQ;
+import prv.liuyao.proxy.utils.queue.ProxyMQ;
 
 import java.net.URL;
 import java.util.function.Consumer;
@@ -35,9 +36,9 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
             "Connection established");
 
     private ChannelFuture sendConnect;
-    private Consumer disruptorConsumer;
-    private SimpleDisruptor tcpDisruptor = new SimpleDisruptor()
-            .registryConsumer(o -> disruptorConsumer.accept(o)) // MQ 需保证数据包顺序
+    private Consumer mqConsumer;
+    private ProxyMQ mq = new LinkedMQ()
+            .registryConsumer(o -> mqConsumer.accept(o)) // MQ 需保证数据包顺序
             ;
 
     public VpnServerAsyncHandler() {
@@ -71,7 +72,7 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
                 request.setUri(url.getFile());
             }
         }
-        tcpDisruptor.push(msg); // 按照数据包到来的顺序放到队列头部
+        mq.push(msg); // 按照数据包到来的顺序放到队列头部
     }
 
     private boolean channelInit(HttpRequest httpRequest, Channel channel, boolean isSsl) {
@@ -144,12 +145,12 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
 
         this.sendConnect.addListener(future -> {
             if (future.isSuccess()) {
-                disruptorConsumer = o -> sendConnect.channel().writeAndFlush(o);
+                mqConsumer = o -> sendConnect.channel().writeAndFlush(o);
             } else {
-                disruptorConsumer = o -> ReferenceCountUtil.release(o);
+                mqConsumer = o -> ReferenceCountUtil.release(o);
             }
 //                disruptor.push(msg); // 注意 首次连接 需要放到队列头部，若在这里加 则有可能晚于第二个数据包
-            tcpDisruptor.start(); // 启动MQ
+            mq.start(); // 启动MQ
         });
 
         // 这种 消费没问题
@@ -185,9 +186,9 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
     }
 
     private void close(ChannelHandlerContext ctx) {
-        if (null != this.tcpDisruptor) {
-            disruptorConsumer = o -> ReferenceCountUtil.release(o);
-            this.tcpDisruptor.shutdown();
+        if (null != this.mq) {
+            mqConsumer = o -> ReferenceCountUtil.release(o);
+            this.mq.shutdown();
         }
         if (sendConnect != null) {
             this.sendConnect.channel().close();

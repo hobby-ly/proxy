@@ -9,7 +9,7 @@ import com.lmax.disruptor.dsl.Disruptor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-public class SimpleDisruptor<T> {
+public class SimpleDisruptor<T> implements ProxyMQ<T> {
 
     protected Disruptor<LyEvent<T>> disruptor;
 
