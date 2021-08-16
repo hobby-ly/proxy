@@ -6,6 +6,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import prv.liuyao.proxy.client.handler.VpnClientAsyncHandler;
+import prv.liuyao.proxy.client.view.HomeView;
 import prv.liuyao.proxy.utils.PropertiesLoader;
 import prv.liuyao.proxy.utils.handler.ByteBufCipherHandler;
 import prv.liuyao.proxy.utils.handler.LastHandler;
@@ -32,6 +33,7 @@ public class ClientStarter {
                         }
                     }).bind(port);
             System.out.println("client start port: " + port);
+            HomeView.showUI(); // 可视化界面
             bind.sync().channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();
