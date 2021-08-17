@@ -36,6 +36,7 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
             "Connection established");
 
     private ChannelFuture sendConnect;
+    private NioEventLoopGroup sendGroup;
     private Consumer mqConsumer;
     private ProxyMQ mq = new LinkedMQ()
             .registryConsumer(o -> mqConsumer.accept(o)) // MQ 需保证数据包顺序
@@ -110,9 +111,10 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
             port = Integer.parseInt(portTemp);
         }
         port = port == -1 ? (isSsl ? 443 : 80) : port;
+        this.sendGroup = new NioEventLoopGroup(1);
         // 处理连接
         this.sendConnect = new Bootstrap()
-                .group(new NioEventLoopGroup(1))
+                .group(this.sendGroup)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer() {
                     @Override
@@ -187,11 +189,14 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
 
     private void close(ChannelHandlerContext ctx) {
         if (null != this.mq) {
-            mqConsumer = o -> ReferenceCountUtil.release(o);
+            this.mqConsumer = o -> ReferenceCountUtil.release(o);
             this.mq.shutdown();
         }
-        if (sendConnect != null) {
+        if (null != this.sendConnect) {
             this.sendConnect.channel().close();
+        }
+        if (null != this.sendGroup) {
+            this.sendGroup.shutdownGracefully();
         }
         ctx.channel().close();
     }
