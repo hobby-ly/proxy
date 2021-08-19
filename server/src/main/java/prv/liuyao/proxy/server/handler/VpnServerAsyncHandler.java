@@ -7,6 +7,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
 import prv.liuyao.proxy.server.ServerStarter;
+import prv.liuyao.proxy.utils.handler.CreatHandler;
 import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
 import prv.liuyao.proxy.utils.queue.LinkedMQ;
 import prv.liuyao.proxy.utils.queue.ProxyMQ;
@@ -30,7 +31,7 @@ import java.util.regex.Pattern;
  *  1. client GET httpRequest data -> server
  *  so. 协议不加密，需要用HttpClientCodec解包，不然浏览器没法识别字节数组
  */
-public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
+public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter implements CreatHandler {
     //http代理隧道握手成功
     public final static HttpResponseStatus SUCCESS = new HttpResponseStatus(200,
             "Connection established");
@@ -187,6 +188,11 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
         cause.printStackTrace();
     }
 
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        close(ctx);
+    }
+
     private void close(ChannelHandlerContext ctx) {
         if (null != this.mq) {
             this.mqConsumer = o -> ReferenceCountUtil.release(o);
@@ -201,4 +207,8 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
         ctx.channel().close();
     }
 
+    @Override
+    public ChannelHandler newEntity() {
+        return new VpnServerAsyncHandler();
+    }
 }

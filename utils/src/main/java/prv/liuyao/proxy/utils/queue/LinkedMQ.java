@@ -24,7 +24,7 @@ public class LinkedMQ<T> implements ProxyMQ<T> {
                 }
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+
         }
     });
 

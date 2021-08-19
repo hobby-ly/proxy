@@ -7,6 +7,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
 import io.netty.util.ReferenceCountUtil;
 import prv.liuyao.proxy.server.ServerStarter;
+import prv.liuyao.proxy.utils.handler.CreatHandler;
 import prv.liuyao.proxy.utils.handler.WriteBackToClientHandler;
 
 import java.net.URL;
@@ -16,7 +17,7 @@ import java.util.regex.Pattern;
 /**
  * 同步版
  */
-public class HttpProxySyncHandler extends ChannelInboundHandlerAdapter {
+public class HttpProxySyncHandler extends ChannelInboundHandlerAdapter implements CreatHandler {
     //http代理隧道握手成功
     public final static HttpResponseStatus SUCCESS = new HttpResponseStatus(200,
             "Connection established");
@@ -151,6 +152,11 @@ public class HttpProxySyncHandler extends ChannelInboundHandlerAdapter {
         cause.printStackTrace();
     }
 
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        close(ctx);
+    }
+
     private void close(ChannelHandlerContext ctx) {
         if (cf != null) {
             this.cf.channel().close();
@@ -158,4 +164,8 @@ public class HttpProxySyncHandler extends ChannelInboundHandlerAdapter {
         ctx.channel().close();
     }
 
+    @Override
+    public ChannelHandler newEntity() {
+        return new HttpProxySyncHandler();
+    }
 }
