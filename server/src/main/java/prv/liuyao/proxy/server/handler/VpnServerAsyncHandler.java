@@ -127,21 +127,7 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter {
                         // todo 加密
 
                         // 往回传输
-                        ch.pipeline().addLast(new WriteBackToClientHandler(channel) {
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                super.channelRead(ctx, msg);
-                                if (msg instanceof HttpResponse) {
-                                    String upgrade = ((HttpResponse) msg).headers().get(HttpHeaderNames.UPGRADE);
-                                    if (HttpHeaderValues.WEBSOCKET.toString().equals(upgrade)) {
-                                        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> remove http codec");
-                                        //websocket转发原始报文
-                                        ctx.channel().pipeline().remove(ServerStarter.HTTP_DECODEC_NAME);
-                                        this.clientChannel.pipeline().remove(ServerStarter.HTTP_DECODEC_NAME);
-                                    }
-                                }
-                            }
-                        });
+                        ch.pipeline().addLast(new WriteBackToClientHandler(channel));
                     }
                 }).connect(host, port);
 
