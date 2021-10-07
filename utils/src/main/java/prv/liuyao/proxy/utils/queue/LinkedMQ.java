@@ -19,8 +19,8 @@ public class LinkedMQ<T> implements ProxyMQ<T> {
                 if (null == poll) {
                     continue;
                 }
-                for (int i = 0; i < consumer.size(); i++) {
-                    consumer.get(i).accept(poll);
+                for (Consumer<T> c : consumer) {
+                    c.accept(poll);
                 }
             }
         } catch (InterruptedException e) {

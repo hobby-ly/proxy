@@ -13,6 +13,7 @@ import prv.liuyao.proxy.utils.queue.LinkedMQ;
 import prv.liuyao.proxy.utils.queue.ProxyMQ;
 
 import java.net.URL;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,6 +37,20 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter implemen
     public final static HttpResponseStatus SUCCESS = new HttpResponseStatus(200,
             "Connection established");
 
+    static AtomicInteger count = new AtomicInteger(0);
+    static {
+        new Thread(() -> {
+            for (;;) {
+                System.out.println(count.get());
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
     private ChannelFuture sendConnect;
     private NioEventLoopGroup sendGroup;
     private Consumer mqConsumer;
@@ -44,6 +59,7 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter implemen
             ;
 
     public VpnServerAsyncHandler() {
+        System.out.println("new " + count.getAndIncrement());
     }
 
     @Override
@@ -128,21 +144,7 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter implemen
                         // todo 加密
 
                         // 往回传输
-                        ch.pipeline().addLast(new WriteBackToClientHandler(channel) {
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                super.channelRead(ctx, msg);
-                                if (msg instanceof HttpResponse) {
-                                    String upgrade = ((HttpResponse) msg).headers().get(HttpHeaderNames.UPGRADE);
-                                    if (HttpHeaderValues.WEBSOCKET.toString().equals(upgrade)) {
-                                        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> remove http codec");
-                                        //websocket转发原始报文
-                                        ctx.channel().pipeline().remove(ServerStarter.HTTP_DECODEC_NAME);
-                                        this.clientChannel.pipeline().remove(ServerStarter.HTTP_DECODEC_NAME);
-                                    }
-                                }
-                            }
-                        });
+                        ch.pipeline().addLast(new WriteBackToClientHandler(channel));
                     }
                 }).connect(host, port);
 
@@ -179,6 +181,7 @@ public class VpnServerAsyncHandler extends ChannelInboundHandlerAdapter implemen
 
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+        System.out.println("-- " + count.decrementAndGet());
         close(ctx);
     }
 
