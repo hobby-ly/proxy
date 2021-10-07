@@ -9,49 +9,69 @@ import java.lang.reflect.InvocationTargetException;
 public class ReflectCostTest {
 
     public static void main(String[] args) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+
+        int loop = 100_0000;
+        testNew(loop);
+        testReflectNew(loop);
+        testReflectNewImpl(loop);
+
+        System.out.println("--------------");
+
+        testNew(loop);
+        testReflectNew(loop);
+        testReflectNewImpl(loop);
+
+    }
+
+    static void testNew(int loop) {
+        Object o;
+        long l = System.currentTimeMillis();
+        for (int i = 0; i < loop; i++) {
+            o = new ReflectEntity();
+        }
+        System.out.println("testNew cost ms: " + (System.currentTimeMillis() - l));
+    }
+
+    static void testReflectNew(int loop) throws IllegalAccessException, InvocationTargetException, InstantiationException {
         String handlerClass = "prv.liuyao.proxy.utils.test.ReflectEntity";
 
         // 反射方式创建handler
-        CreatHandler usedHandler;
         Constructor<ChannelHandler> handlerConstructor;
         try {
             Class aClass = Class.forName(handlerClass);
             Constructor constructor = aClass.getConstructor();
-            Object handler = constructor.newInstance();
-            if (!(handler instanceof ChannelHandler) || !(handler instanceof CreatHandler)) {
-                System.out.println("handler class error: " + handler.getClass());
-                return;
-            }
-            usedHandler = (CreatHandler) handler;
             handlerConstructor = constructor;
-            System.out.println("use handler " + aClass.getName());
         } catch (Exception e) {
             e.printStackTrace();
             return;
         }
 
-        long loop = 100_0000;
-        long l;
         Object o;
-
-        l = System.currentTimeMillis();
-        for (int i = 0; i < loop; i++) {
-            o = usedHandler.newEntity();
-        }
-        System.out.println(System.currentTimeMillis() - l);
-
-        l = System.currentTimeMillis();
-        for (int i = 0; i < loop; i++) {
-            o = new ReflectEntity();
-        }
-        System.out.println(System.currentTimeMillis() - l);
-
-        l = System.currentTimeMillis();
+        long l = System.currentTimeMillis();
         for (int i = 0; i < loop; i++) {
             o = handlerConstructor.newInstance();
         }
-        System.out.println(System.currentTimeMillis() - l);
+        System.out.println("testReflectNew cost ms: " + (System.currentTimeMillis() - l));
+    }
 
+    static void testReflectNewImpl(int loop) {
+        String handlerClass = "prv.liuyao.proxy.utils.test.ReflectEntity";
+        // 反射方式创建handler
+        CreatHandler usedHandler;
+        try {
+            Class aClass = Class.forName(handlerClass);
+            Constructor constructor = aClass.getConstructor();
+            usedHandler = (CreatHandler) constructor.newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+        Object o;
+        long l = System.currentTimeMillis();
+        for (int i = 0; i < loop; i++) {
+            o = usedHandler.newEntity();
+        }
+        System.out.println("testReflectNewImpl cost ms: " + (System.currentTimeMillis() - l));
     }
 }
 

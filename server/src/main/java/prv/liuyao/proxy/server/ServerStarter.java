@@ -21,6 +21,14 @@ public class ServerStarter {
     public static final String HTTP_DECODEC_NAME = "httpCodec";
 
     public static void main(String[] args) throws IllegalAccessException, InvocationTargetException, InstantiationException {
+
+        Object o;
+        long l = System.currentTimeMillis();
+        for (int i = 0; i < 100_0000; i++) {
+            o = new HttpProxySyncHandler();
+        }
+        System.out.println(System.currentTimeMillis() - l);
+
         int port = PropertiesLoader.getInteger("app.port");
         String handlerClass = PropertiesLoader.getString("netty.handler");
 
@@ -45,14 +53,6 @@ public class ServerStarter {
             e.printStackTrace();
             return;
         }
-        long l;
-        Object o;
-
-        l = System.currentTimeMillis();
-        for (int i = 0; i < 100_0000; i++) {
-            o = new HttpProxySyncHandler();
-        }
-        System.out.println(System.currentTimeMillis() - l);
 
         l = System.currentTimeMillis();
         for (int i = 0; i < 100_0000; i++) {
@@ -76,7 +76,7 @@ public class ServerStarter {
                                 .addLast(handlerConstructor.newInstance());
                     }
                 }).bind(port);
-        System.out.println("server start port: " + port + ", "
+        System.out.println("server start\n\tport: " + port + "\n\tkey"
                 + PropertiesLoader.getString("transport.aes.key"));
         try {
             bind.sync().channel().closeFuture().sync();
