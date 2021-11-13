@@ -52,14 +52,22 @@ public class AESCipher {
         return this.decryptCipher.doFinal(bytes);
     }
 
+//    public static String byteArray2HexStr(byte[] buf) {
+//        StringBuffer sb = new StringBuffer();
+//        for(int i = 0; i < buf.length; ++i) {
+//            String hex = Integer.toHexString(buf[i] & 255);
+//            if (hex.length() == 1) {
+//                sb.append("0");
+//            }
+//            sb.append(hex.toUpperCase());
+//        }
+//        return sb.toString();
+//    }
+
     public static String byteArray2HexStr(byte[] buf) {
         StringBuffer sb = new StringBuffer();
         for(int i = 0; i < buf.length; ++i) {
-            String hex = Integer.toHexString(buf[i] & 255);
-            if (hex.length() == 1) {
-                sb.append("0");
-            }
-            sb.append(hex.toUpperCase());
+            sb.append(byteToHex(buf[i]));
         }
         return sb.toString();
     }
