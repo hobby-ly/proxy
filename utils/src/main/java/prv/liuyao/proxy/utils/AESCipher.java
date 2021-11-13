@@ -14,6 +14,8 @@ public class AESCipher {
 
 //    public static final AESCipher COMMON = new AESCipher(SpringInit.getEnvironment().getProperty("sso.3rd.aes.key"));
 
+    private static char[][] judge = {{48, 10, 0}, {65, 6, 10}, {97, 6, 10}};
+
     private Cipher encryptCipher;
     private Cipher decryptCipher;
 
@@ -52,6 +54,24 @@ public class AESCipher {
         return this.decryptCipher.doFinal(bytes);
     }
 
+    public String encryptStr(String str) {
+        try {
+            return byteArray2HexStr(encrypt(str.getBytes("utf-8")));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    public String decryptStr(String hexStr) {
+        try {
+            return new String(decrypt(hexStr2ByteArray(hexStr)), "utf-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
 //    public static String byteArray2HexStr(byte[] buf) {
 //        StringBuffer sb = new StringBuffer();
 //        for(int i = 0; i < buf.length; ++i) {
@@ -84,7 +104,6 @@ public class AESCipher {
 
     public static int hexToInt(char c) {
         int result;
-        char[][] judge = {{48, 10, 0}, {65, 6, 10}, {97, 6, 10}};
         for (char[] j : judge) {
             result = c - j[0];
             if (result > -1 && result < j[1]){
@@ -108,24 +127,6 @@ public class AESCipher {
         int n = c < 0 ? c + 256 : c;
         char[] hex = {intToHex(n >> 4), intToHex(c& 15)};
         return new String(hex);
-    }
-
-    public String encryptStr(String str) {
-        try {
-            return byteArray2HexStr(encrypt(str.getBytes("utf-8")));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
-    }
-
-    public String decryptStr(String hexStr) {
-        try {
-            return new String(decrypt(hexStr2ByteArray(hexStr)), "utf-8");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return "";
     }
 
     public static void main(String[] args) throws Exception {
